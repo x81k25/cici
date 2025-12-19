@@ -1,0 +1,132 @@
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+*.whl
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# virtual environments
+.venv/
+venv/
+ENV/
+
+# uv
+.uv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# linters and type checkers
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# test runners
+.tox/
+.nox/
+
+# logs (may contain user data)
+logs/
+
+# certs (contain private keys)
+certs/
+*.pem
+*.key
+*.crt
+
+# config (user-specific overrides only)
+# translations.yaml and commands.yaml ARE tracked (part of codebase)
+config/*.local.yaml
+
+# claude code settings (user-specific)
+.claude/
+
+# test artifacts
+tests/e2e_test_files/
+tests/claude_code_sandbox/
+.pytest_cache/
+.hypothesis/
+
+# coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.cache
+
+# models (large binary files)
+models/
+
+# huggingface cache (ML models)
+.cache/huggingface/
+
+# jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# OS
+.DS_Store
+Thumbs.db
+
+# streamlit
+.streamlit/secrets.toml
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# secrets and credentials
+*.secret
+*_secret.*
+credentials.*
+secrets.*
+api_keys.*
+tokens.*
+
+# database files
+*.db
+*.sqlite
+*.sqlite3
+
+# audio recordings (may contain user voice data)
+*.wav
+*.mp3
+*.ogg
+*.flac
+recordings/
+
+# temp files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# project instructions (user-specific)
+CLAUDE.md
+
+# packaging
+MANIFEST.in
+*.tar.gz
+
+# profiling
+*.prof
+*.lprof

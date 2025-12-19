@@ -1,0 +1,137 @@
+# ------------------------------------------------------------------------------
+# cici voice-to-text translations
+# ------------------------------------------------------------------------------
+# format: "spoken phrase" -> "output character/string"
+# phrases are matched with word boundaries and are case-insensitive
+
+# ------------------------------------------------------------------------------
+# NATO phonetic alphabet (modified to avoid CLI command conflicts)
+# ------------------------------------------------------------------------------
+# deviations from standard NATO:
+#   - "elmo" instead of "echo" (conflicts with shell echo command)
+#   - "dixie" instead of "delta" (conflicts with git delta, diff tools)
+nato_alphabet:
+  alpha: a
+  bravo: b
+  charlie: c
+  dixie: d
+  elmo: e
+  foxtrot: f
+  golf: g
+  hotel: h
+  india: i
+  juliet: j
+  kilo: k
+  lima: l
+  mike: m
+  november: n
+  oscar: o
+  papa: p
+  quebec: q
+  romeo: r
+  sierra: s
+  tango: t
+  uniform: u
+  victor: v
+  whiskey: w
+  x-ray: x
+  yankee: y
+  zulu: z
+
+# ------------------------------------------------------------------------------
+# symbols and operators
+# ------------------------------------------------------------------------------
+symbols:
+  # dashes and hyphens
+  dash: "-"
+  minus: "-"
+  hyphen: "-"
+  double dash: "--"
+  double minus: "--"
+
+  # slashes
+  slash: "/"
+  forward slash: "/"
+  backslash: "\\"
+
+  # dots and periods
+  dot: "."
+  period: "."
+  point: "."
+
+  # underscores and special
+  underscore: "_"
+  equals: "="
+  equal sign: "="
+
+  # comparison
+  greater than: ">"
+  less than: "<"
+
+  # pipes and redirects
+  pipe: "|"
+  tilde: "~"
+
+  # special characters
+  at sign: "@"
+  at: "@"
+  hash: "#"
+  pound: "#"
+  dollar: "$"
+  dollar sign: "$"
+  percent: "%"
+  ampersand: "&"
+  and sign: "&"
+
+  # wildcards
+  star: "*"
+  asterisk: "*"
+
+  # quotes and brackets
+  quote: "\""
+  single quote: "'"
+  open paren: "("
+  close paren: ")"
+  open bracket: "["
+  close bracket: "]"
+  open brace: "{"
+  close brace: "}"
+
+  # misc
+  colon: ":"
+  semicolon: ";"
+  comma: ","
+  exclamation: "!"
+  question mark: "?"
+  caret: "^"
+  backtick: "`"
+
+# ------------------------------------------------------------------------------
+# numbers (spelled out)
+# ------------------------------------------------------------------------------
+numbers:
+  zero: "0"
+  one: "1"
+  two: "2"
+  three: "3"
+  four: "4"
+  five: "5"
+  six: "6"
+  seven: "7"
+  eight: "8"
+  nine: "9"
+
+# ------------------------------------------------------------------------------
+# common command words
+# ------------------------------------------------------------------------------
+commands:
+  spacebar: " "
+  newline: "\n"
+  tab: "\t"
+
+# ------------------------------------------------------------------------------
+# claude code shortcuts
+# ------------------------------------------------------------------------------
+claude_shortcuts:
+  ask claude: "echo \""
+  end question: "\" | claude --print"

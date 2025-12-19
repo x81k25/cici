@@ -1,0 +1,39 @@
+[project]
+name = "mind"
+version = "0.1.0"
+description = "FastAPI service for command routing, session management, and controllers"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "claude-agent-sdk>=0.1.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.1",
+    "loguru>=0.7.0",
+    "piper-tts>=1.3.0",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+    "pyyaml>=6.0",
+    "uvicorn>=0.34.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mind"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "httpx>=0.28.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

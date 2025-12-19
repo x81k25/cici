@@ -1,0 +1,1 @@
+"""EARS - Audio transcription service."""

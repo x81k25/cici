@@ -1,0 +1,82 @@
+# ------------------------------------------------------------------------------
+# cici command triggers
+# ------------------------------------------------------------------------------
+# format: "trigger phrase" -> action config
+# use {text} placeholder for content after the trigger
+#
+# action types:
+#   - cli: execute shell command
+#   - cli_enter: enter CLI commands mode (sticky)
+#   - cli_exit: exit CLI mode, return to Ollama (default)
+#   - ollama_enter: enter Ollama mode (default mode)
+#   - ollama_exit: exit Ollama mode (same as cli_enter)
+
+# ------------------------------------------------------------------------------
+# cli mode triggers (for entering CLI commands mode from Ollama default)
+# ------------------------------------------------------------------------------
+cli_mode:
+  commands mode:
+    description: "Enter CLI commands mode (sticky)"
+    action: cli_enter
+  command mode:
+    description: "Enter CLI commands mode (sticky)"
+    action: cli_enter
+  cli mode:
+    description: "Enter CLI commands mode (sticky)"
+    action: cli_enter
+  terminal mode:
+    description: "Enter CLI commands mode (sticky)"
+    action: cli_enter
+
+# ------------------------------------------------------------------------------
+# ollama mode triggers (for returning to Ollama mode from CLI)
+# ------------------------------------------------------------------------------
+ollama_mode:
+  back to chat:
+    description: "Exit CLI mode, return to Ollama (default)"
+    action: cli_exit
+  exit commands:
+    description: "Exit CLI mode, return to Ollama (default)"
+    action: cli_exit
+  exit cli:
+    description: "Exit CLI mode, return to Ollama (default)"
+    action: cli_exit
+  chat mode:
+    description: "Exit CLI mode, return to Ollama (default)"
+    action: cli_exit
+  ollama mode:
+    description: "Exit CLI mode, return to Ollama (default)"
+    action: cli_exit
+  # legacy triggers (kept for compatibility)
+  big brain time:
+    description: "Exit CLI mode, return to Ollama (default)"
+    action: cli_exit
+  big brain:
+    description: "Exit CLI mode, return to Ollama (default)"
+    action: cli_exit
+
+# ------------------------------------------------------------------------------
+# claude API integration
+# ------------------------------------------------------------------------------
+claude_api:
+  ask claude:
+    description: "Ask Claude a single question (stateless API call)"
+    action: claude
+    requires_text: true
+
+# ------------------------------------------------------------------------------
+# claude code mode triggers (for entering Claude Code mode from any mode)
+# ------------------------------------------------------------------------------
+claude_code_mode:
+  let's code:
+    description: "Enter Claude Code mode (SDK integration)"
+    action: claude_code_enter
+  lets code:
+    description: "Enter Claude Code mode (SDK integration)"
+    action: claude_code_enter
+  code mode:
+    description: "Enter Claude Code mode (SDK integration)"
+    action: claude_code_enter
+  coding mode:
+    description: "Enter Claude Code mode (SDK integration)"
+    action: claude_code_enter
