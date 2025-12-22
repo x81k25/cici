@@ -12,6 +12,7 @@ import streamlit as st
 from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
 from mind_client import MindClient, ConnectionState
+from mouth_client import MouthClient
 
 # ------------------------------------------------------------------------------
 # Configuration
@@ -30,6 +31,7 @@ def check_mind_health(api_url: str) -> bool:
 
 API_URL = st.session_state.get("api_url", "http://localhost:8765")
 EARS_WS_URL = "ws://localhost:8766/?debug=true"
+MOUTH_URL = "http://localhost:8001"
 TARGET_SAMPLE_RATE = 16000
 
 # ------------------------------------------------------------------------------
@@ -51,8 +53,15 @@ if "audio_ws_connected" not in st.session_state:
 if "audio_processor" not in st.session_state:
     st.session_state.audio_processor = None
 
+if "mouth_client" not in st.session_state:
+    st.session_state.mouth_client = MouthClient(base_url=MOUTH_URL)
+
+if "tts_audio_queue" not in st.session_state:
+    st.session_state.tts_audio_queue = []
+
 # Shorthand reference
 client: MindClient = st.session_state.client
+mouth: MouthClient = st.session_state.mouth_client
 
 
 # ------------------------------------------------------------------------------
@@ -356,11 +365,17 @@ with st.sidebar:
     st.header("Connection")
     st.text(f"MIND: {API_URL}")
     st.text(f"EARS: {EARS_WS_URL}")
+    st.text(f"MOUTH: {MOUTH_URL}")
 
     if check_mind_health(API_URL):
         st.success("MIND online")
     else:
         st.error("MIND offline")
+
+    if mouth.health_check():
+        st.success("MOUTH online")
+    else:
+        st.warning("MOUTH offline")
 
     if client.state == ConnectionState.CONNECTED:
         st.caption(f"Mode: `{client.mode}`")
@@ -478,7 +493,21 @@ with audio_tab:
             # Create fresh processor for next session
             st.session_state.audio_processor = AudioProcessor(EARS_WS_URL)
 
-# Poll for messages from audio processor (runs on main thread)
+# ------------------------------------------------------------------------------
+# Polling and Audio Playback
+# ------------------------------------------------------------------------------
+
+def estimate_wav_duration(wav_bytes: bytes) -> float:
+    """Estimate WAV duration in seconds from byte size.
+
+    Assumes: 16kHz sample rate, 16-bit (2 bytes/sample), mono.
+    WAV header is typically 44 bytes.
+    """
+    audio_bytes = len(wav_bytes) - 44
+    bytes_per_second = 16000 * 2  # sample_rate * bytes_per_sample
+    return max(0.5, audio_bytes / bytes_per_second)
+
+# Poll for messages from audio processor
 if st.session_state.audio_processor:
     new_messages = st.session_state.audio_processor.get_messages()
     if new_messages:
@@ -492,11 +521,20 @@ if st.session_state.audio_ws_connected:
         if formatted:
             add_to_log(formatted)
 
+# Poll for TTS audio (during audio mode only)
+if st.session_state.audio_ws_connected:
+    audio_bytes, metadata = mouth.get_next_audio()
+    if audio_bytes:
+        st.session_state.tts_audio_queue.append(audio_bytes)
 
-# ------------------------------------------------------------------------------
-# UI - Message Log
-# ------------------------------------------------------------------------------
+# Play TTS audio if queued
+audio_duration = 0.0
+if st.session_state.tts_audio_queue:
+    audio_bytes = st.session_state.tts_audio_queue.pop(0)
+    audio_duration = estimate_wav_duration(audio_bytes)
+    st.audio(audio_bytes, format="audio/wav", autoplay=True)
 
+# Display message log
 if st.session_state.message_log:
     log_text = "\n\n".join(reversed(st.session_state.message_log[-50:]))
     st.markdown("""
@@ -509,7 +547,11 @@ if st.session_state.message_log:
     """, unsafe_allow_html=True)
     st.code(log_text)
 
-# Auto-refresh while audio streaming to show new transcriptions
+# Auto-refresh while audio streaming
 if st.session_state.audio_ws_connected:
-    time.sleep(1)
+    if audio_duration > 0:
+        # Wait for audio to finish before refreshing
+        time.sleep(audio_duration + 0.2)
+    else:
+        time.sleep(1.0)
     st.rerun()

@@ -45,6 +45,7 @@ CICI_API_SECURE=false
 face/
 ├── app.py              # Main Streamlit application
 ├── mind_client.py      # HTTP client for MIND REST API
+├── mouth_client.py     # HTTP client for MOUTH TTS service
 ├── utils/
 │   ├── audio_streamer.py  # AudioWorklet-based streaming to EARS
 │   └── audio_recorder.py  # Local recording component
@@ -66,6 +67,16 @@ FACE streams audio to EARS using the Web Audio API's AudioWorklet:
 The testing page (`pages/testing.py`) provides benchmarks for:
 1. **Local Recording** - Record and playback locally
 2. **WebSocket Streaming** - Stream to EARS and view transcriptions
+
+## TTS Audio Playback
+
+In audio mode, FACE polls MOUTH for synthesized speech and plays it automatically:
+
+- Polls `GET /audio/next` during audio streaming
+- Plays WAV audio via `st.audio()` with autoplay
+- Only active when in audio mode (not text mode)
+
+**Note:** Browser autoplay requires user interaction first (clicking "START" enables it).
 
 ## Usage
 

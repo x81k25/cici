@@ -15,6 +15,7 @@ Endpoints:
 """
 
 # standard library imports
+import uuid
 from contextlib import asynccontextmanager
 
 # 3rd-party imports
@@ -27,6 +28,8 @@ from mind.transcript_buffer import TranscriptBuffer
 from mind.message_buffer import MessageBuffer
 from mind.input_processor import InputProcessor
 from mind.command_router import CommandRouter
+from mind.core.tts_client import send_to_tts, check_tts_health
+from mind.core.sentence_detector import SentenceBuffer
 from mind.schemas import (
     TranscriptRequest,
     TranscriptResponse,
@@ -96,6 +99,36 @@ app = FastAPI(
 # Helper functions
 # ------------------------------------------------------------------------------
 
+async def dispatch_to_tts(text: str, request_id: str | None = None) -> None:
+    """
+    Dispatch text to TTS service using sentence detection.
+
+    Splits text into sentences and sends each to TTS for synthesis.
+    Fire-and-forget - does not block on TTS response.
+
+    Args:
+        text: Text to synthesize
+        request_id: Optional request ID for tracing
+    """
+    if not text or not text.strip():
+        return
+
+    request_id = request_id or str(uuid.uuid4())
+    sentence_buffer = SentenceBuffer()
+
+    # add the full text and get sentences
+    sentences = sentence_buffer.add(text)
+
+    # flush any remaining content
+    final = sentence_buffer.flush()
+    if final:
+        sentences.append(final)
+
+    # dispatch each sentence to TTS
+    for sentence in sentences:
+        await send_to_tts(sentence, request_id)
+
+
 async def process_command(text: str, original_voice: str | None = None) -> None:
     """
     Process a command and add the response to the message buffer.
@@ -134,43 +167,58 @@ async def process_command(text: str, original_voice: str | None = None) -> None:
         # mode change responses
         if route_type in ("cli_enter", "ollama_enter", "claude_code_enter"):
             confirmation = route_result.get("confirmation", {})
+            confirmation_msg = confirmation.get("message", "Mode changed")
             await message_buffer.add({
                 "type": "system",
-                "content": confirmation.get("message", "Mode changed"),
+                "content": confirmation_msg,
                 "mode_changed": True,
                 "new_mode": session.interaction_mode,
             })
+            # dispatch mode confirmation to TTS
+            await dispatch_to_tts(confirmation_msg)
 
         # Ollama response
         elif route_type == "ollama":
-            logger.info(f"adding Ollama response to message buffer: {result.get('response', '')[:50]}...")
+            response_text = result.get("response")
+            logger.info(f"adding Ollama response to message buffer: {response_text[:50] if response_text else ''}...")
             await message_buffer.add({
                 "type": "llm_response",
-                "content": result.get("response"),
+                "content": response_text,
                 "model": "phi3",
                 "success": result.get("success", False),
                 "error": result.get("error"),
             })
+            # dispatch Ollama response to TTS
+            if result.get("success") and response_text:
+                await dispatch_to_tts(response_text)
 
         # Claude response
         elif route_type == "claude":
+            response_text = result.get("response")
             await message_buffer.add({
                 "type": "llm_response",
-                "content": result.get("response"),
+                "content": response_text,
                 "model": result.get("model", "claude-sonnet"),
                 "success": result.get("success", False),
                 "error": result.get("error"),
             })
+            # dispatch Claude response to TTS
+            if result.get("success") and response_text:
+                await dispatch_to_tts(response_text)
 
         # Claude Code response
         elif route_type == "claude_code":
+            response_text = result.get("response")
             await message_buffer.add({
                 "type": "llm_response",
-                "content": result.get("response"),
+                "content": response_text,
                 "model": result.get("model", "claude-code"),
                 "success": result.get("success", False),
                 "error": result.get("error"),
             })
+            # dispatch Claude Code response to TTS
+            if result.get("success") and response_text:
+                await dispatch_to_tts(response_text)
 
         # CLI response
         elif route_type in ("cli", "trigger"):
@@ -185,6 +233,11 @@ async def process_command(text: str, original_voice: str | None = None) -> None:
                 "original_command": result.get("original_command"),
                 "corrected_command": result.get("corrected_command"),
             })
+            # dispatch CLI summary to TTS if available
+            summary = route_result.get("summary", {})
+            summary_text = summary.get("summary") if summary else None
+            if summary_text:
+                await dispatch_to_tts(summary_text)
 
         # error response
         elif route_type == "error":
@@ -337,12 +390,14 @@ async def get_messages():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
+    tts_healthy = await check_tts_health()
     return {
         "status": "healthy",
         "service": "mind",
         "mode": session.interaction_mode if session else None,
         "transcript_buffer": transcript_buffer.words if transcript_buffer else [],
         "pending_messages": message_buffer.count if message_buffer else 0,
+        "tts_available": tts_healthy,
     }
 
 
