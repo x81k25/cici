@@ -1,5 +1,5 @@
 # standard library imports
-from typing import Literal
+from typing import Literal, Any
 
 # 3rd-party imports
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ InteractionMode = Literal["ollama", "cli", "claude_code"]
 # ------------------------------------------------------------------------------
 
 class LLMResponse(BaseModel):
-    """Response from the LLM (Ollama)."""
+    """Response from an LLM (Ollama, Claude, Claude Code)."""
     success: bool
     content: str | None = Field(
         default=None,
@@ -102,55 +102,77 @@ class InputEcho(BaseModel):
 # Request models
 # ------------------------------------------------------------------------------
 
-class ProcessTextRequest(BaseModel):
-    """Request to process text input."""
-    text: str = Field(description="The text to process")
+class TranscriptRequest(BaseModel):
+    """Request from EARS with partial transcription."""
+    text: str = Field(description="Partial transcription (one or more words)")
+
+
+class TextRequest(BaseModel):
+    """Request from FACE with complete text input."""
+    text: str = Field(description="The complete text to process")
     original_voice: str | None = Field(
         default=None,
         description="Original voice transcription (for LLM fallback)"
     )
 
 
-class CreateSessionRequest(BaseModel):
-    """Request to create a new session."""
-    pass  # No parameters needed
-
-
 # ------------------------------------------------------------------------------
 # Response models
 # ------------------------------------------------------------------------------
 
-class SessionResponse(BaseModel):
-    """Response with session information."""
-    session_id: str
-    mode: InteractionMode
-    current_directory: str | None = None
-    created_at: str | None = None
-    last_activity: str | None = None
-    idle_seconds: float | None = None
+class TranscriptResponse(BaseModel):
+    """Response for transcript word buffering."""
+    status: str = Field(description="'buffered' or 'processing'")
+    buffer: list[str] | None = Field(
+        default=None,
+        description="Current buffer contents (when status='buffered')"
+    )
+    command: str | None = Field(
+        default=None,
+        description="Full command being processed (when status='processing')"
+    )
 
 
-class ProcessResponse(BaseModel):
-    """Response from processing text input."""
-    session_id: str
-    mode: InteractionMode
-    current_directory: str | None = None
-    input: InputEcho | None = None
-    llm_response: LLMResponse | None = None
-    cli_result: CLIResult | None = None
-    error: ErrorDetail | None = None
-    cancelled: bool = False
+class TextResponse(BaseModel):
+    """Response for text input."""
+    status: str = Field(description="'ok' or 'error'")
+    error: str | None = Field(
+        default=None,
+        description="Error message if status='error'"
+    )
 
 
-class ErrorResponse(BaseModel):
-    """Error response."""
-    error: ErrorDetail
+class Message(BaseModel):
+    """A single message in the message buffer."""
+    type: str = Field(description="Message type: 'llm_response', 'cli_result', 'error', 'system'")
+    content: str | None = Field(default=None, description="Message content")
+    model: str | None = Field(default=None, description="Model used (for LLM responses)")
+    command: str | None = Field(default=None, description="Command executed (for CLI results)")
+    output: str | None = Field(default=None, description="Command output (for CLI results)")
+    exit_code: int | None = Field(default=None, description="Exit code (for CLI results)")
+    error: str | None = Field(default=None, description="Error message")
+    timestamp: str | None = Field(default=None, description="ISO timestamp")
+
+
+class MessagesResponse(BaseModel):
+    """Response containing buffered messages for FACE."""
+    messages: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="List of messages"
+    )
+    mode: InteractionMode = Field(description="Current interaction mode")
+    current_directory: str = Field(description="Current working directory")
 
 
 class StatusResponse(BaseModel):
     """Simple status response."""
     status: str
-    killed: int | None = None
+    message: str | None = None
+
+
+class ErrorResponse(BaseModel):
+    """Error response."""
+    error: ErrorDetail
 
 
 # ------------------------------------------------------------------------------
@@ -159,16 +181,11 @@ class StatusResponse(BaseModel):
 
 class ErrorCodes:
     """Standard error codes for programmatic handling."""
-    # Session errors
-    SESSION_NOT_FOUND = "session_not_found"
-    SESSION_EXPIRED = "session_expired"
-    SESSION_ACTIVE = "session_active"
-    MAX_SESSIONS = "max_sessions_reached"
-
     # Input errors
     INVALID_JSON = "invalid_json"
     INVALID_MESSAGE_TYPE = "invalid_message_type"
     MISSING_FIELD = "missing_field"
+    EMPTY_BUFFER = "empty_buffer"
 
     # Execution errors
     COMMAND_BLOCKED = "command_blocked"
@@ -179,3 +196,4 @@ class ErrorCodes:
 
     # Internal errors
     INTERNAL_ERROR = "internal_error"
+    SESSION_NOT_INITIALIZED = "session_not_initialized"

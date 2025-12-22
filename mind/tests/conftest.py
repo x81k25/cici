@@ -23,24 +23,13 @@ def pytest_configure(config):
 # ------------------------------------------------------------------------------
 
 @pytest_asyncio.fixture
-async def session_manager():
-    """Create a fresh SessionManager for testing."""
-    from mind.session import SessionManager
-    from mind.controllers.claude_code import ClaudeCodeController
-    claude_code_controller = ClaudeCodeController()
-    manager = SessionManager(max_sessions=3, claude_code_controller=claude_code_controller)
-    yield manager
-    # cleanup all sessions
-    for session_id in list(manager.sessions.keys()):
-        await manager.remove_session(session_id)
-
-
-@pytest_asyncio.fixture
-async def session(session_manager):
+async def session():
     """Create a session for testing."""
-    session = await session_manager.create_session()
+    from mind.session import Session
+    session = Session(id="test")
     yield session
-    # cleanup handled by session_manager fixture
+    # cleanup
+    session.cleanup()
 
 
 @pytest.fixture
@@ -69,6 +58,20 @@ def ollama_controller():
     """Create an OllamaController for testing."""
     from mind.controllers.ollama import OllamaController
     return OllamaController()
+
+
+@pytest.fixture
+def transcript_buffer():
+    """Create a TranscriptBuffer for testing."""
+    from mind.transcript_buffer import TranscriptBuffer
+    return TranscriptBuffer()
+
+
+@pytest.fixture
+def message_buffer():
+    """Create a MessageBuffer for testing."""
+    from mind.message_buffer import MessageBuffer
+    return MessageBuffer()
 
 
 @pytest.fixture

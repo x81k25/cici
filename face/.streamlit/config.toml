@@ -1,0 +1,4 @@
+[server]
+sslCertFile = "certs/server.pem"
+sslKeyFile = "certs/server.key"
+enableStaticServing = true

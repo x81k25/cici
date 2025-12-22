@@ -1,10 +1,6 @@
 # standard library imports
-import asyncio
-import uuid
-from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 
 # 3rd-party imports
 from loguru import logger
@@ -21,9 +17,9 @@ from mind.core.session_logger import (
 @dataclass
 class Session:
     """
-    Per-request session state.
+    Internal session state.
 
-    Each API session gets its own Session instance that tracks
+    Maintains the single persistent session that tracks
     conversation state, mode, and active tasks.
     """
     id: str
@@ -37,12 +33,15 @@ class Session:
     last_activity: datetime = field(default_factory=datetime.now)
 
     def __post_init__(self):
-        """Initialize tmux session after dataclass init."""
+        """Initialize tmux session and logging after dataclass init."""
         if self.tmux is None:
             # create tmux session with timestamp prefix for cleanup
             timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
             tmux_name = f"{timestamp}_{self.id}"
             self.tmux = TmuxSession(tmux_name)
+
+        # create logging session
+        create_log_session(self.id)
 
     @property
     def logger(self):
@@ -162,7 +161,7 @@ class Session:
             self.tmux.kill()
         # remove logging handlers
         remove_log_session(self.id)
-        self.logger.info(f"session {self.id} cleaned up")
+        logger.info(f"session {self.id} cleaned up")
 
     def to_dict(self) -> dict:
         """Convert session to dictionary for API responses."""
@@ -174,123 +173,3 @@ class Session:
             "last_activity": self.last_activity.isoformat(),
             "idle_seconds": (datetime.now() - self.last_activity).total_seconds(),
         }
-
-
-class SessionManager:
-    """
-    Manages all active sessions.
-
-    Enforces maximum concurrent sessions and provides session lookup.
-    """
-
-    def __init__(self, max_sessions: int = 10, claude_code_controller=None):
-        """
-        Initialize the session manager.
-
-        Args:
-            max_sessions: Maximum number of concurrent sessions allowed.
-            claude_code_controller: Optional ClaudeCodeController for cleanup.
-        """
-        self.sessions: dict[str, Session] = {}
-        self.max_sessions = max_sessions
-        self.claude_code_controller = claude_code_controller
-        self._lock = asyncio.Lock()
-
-    async def create_session(self) -> Session | None:
-        """
-        Create a new session.
-
-        Returns:
-            The new Session instance, or None if max sessions reached.
-        """
-        async with self._lock:
-            if len(self.sessions) >= self.max_sessions:
-                logger.warning(f"max sessions ({self.max_sessions}) reached, rejecting")
-                return None
-
-            # generate unique session ID
-            session_id = str(uuid.uuid4())[:8]
-            while session_id in self.sessions:
-                session_id = str(uuid.uuid4())[:8]
-
-            # create logging session
-            create_log_session(session_id)
-
-            # create session
-            session = Session(id=session_id)
-
-            self.sessions[session_id] = session
-            logger.info(f"created session {session_id} ({len(self.sessions)}/{self.max_sessions})")
-
-            return session
-
-    async def get_session(self, session_id: str) -> Session | None:
-        """Get a session by ID."""
-        return self.sessions.get(session_id)
-
-    async def remove_session(self, session_id: str) -> bool:
-        """
-        Remove a session and clean up its resources.
-
-        Args:
-            session_id: The session ID to remove.
-
-        Returns:
-            True if session was removed, False if not found.
-        """
-        async with self._lock:
-            session = self.sessions.pop(session_id, None)
-            if session:
-                # cancel any active tasks
-                await session.cancel_active_tasks()
-
-                # clean up controller resources first
-                if self.claude_code_controller:
-                    try:
-                        await self.claude_code_controller.cleanup_session(session)
-                        logger.debug(f"cleaned up Claude Code controller for session {session_id}")
-                    except Exception as e:
-                        logger.warning(f"error cleaning up Claude Code controller for session {session_id}: {e}")
-
-                # clean up session resources
-                session.cleanup()
-                logger.info(f"removed session {session_id} ({len(self.sessions)}/{self.max_sessions})")
-                return True
-            return False
-
-    async def list_sessions(self) -> list[dict]:
-        """List all sessions."""
-        return [s.to_dict() for s in self.sessions.values()]
-
-    async def cleanup_stale_sessions(self, max_idle_seconds: float = 3600.0) -> int:
-        """
-        Remove sessions that have been idle too long.
-
-        Args:
-            max_idle_seconds: Maximum idle time before session is removed.
-
-        Returns:
-            Number of sessions cleaned up.
-        """
-        now = datetime.now()
-        to_remove = []
-
-        async with self._lock:
-            for session_id, session in self.sessions.items():
-                idle_duration = (now - session.last_activity).total_seconds()
-                if idle_duration > max_idle_seconds:
-                    to_remove.append(session_id)
-
-        # remove outside lock to avoid deadlock with remove_session
-        cleaned = 0
-        for session_id in to_remove:
-            logger.info(f"cleaning up stale session {session_id}")
-            await self.remove_session(session_id)
-            cleaned += 1
-
-        return cleaned
-
-    @property
-    def count(self) -> int:
-        """Get the number of sessions."""
-        return len(self.sessions)

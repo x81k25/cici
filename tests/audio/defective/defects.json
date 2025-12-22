@@ -1,0 +1,127 @@
+[
+    {
+        "filename": "defect_low_volume.webm",
+        "defect_type": "low_volume",
+        "description": "Audio scaled to 5% amplitude, nearly inaudible",
+        "duration_seconds": 5.341,
+        "expected_error": "transcription_empty_or_failed",
+        "expected_behavior": "VAD may not detect speech, transcription likely empty or garbage",
+        "parameters": {
+            "scale_factor": 0.05
+        }
+    },
+    {
+        "filename": "defect_silence.webm",
+        "defect_type": "silence",
+        "description": "All samples zeroed out, complete silence",
+        "duration_seconds": 5.341,
+        "expected_error": "no_speech_detected",
+        "expected_behavior": "VAD should detect no speech, transcription should be empty",
+        "parameters": {}
+    },
+    {
+        "filename": "defect_clipping.webm",
+        "defect_type": "clipping",
+        "description": "Heavy distortion from 10x gain clipped at ±32767",
+        "duration_seconds": 5.341,
+        "expected_error": "transcription_degraded",
+        "expected_behavior": "Transcription may be garbled or partially correct due to distortion",
+        "parameters": {
+            "gain": 10.0,
+            "clip_threshold": 32767
+        }
+    },
+    {
+        "filename": "defect_dc_offset.webm",
+        "defect_type": "dc_offset",
+        "description": "Constant +16000 DC offset added to all samples",
+        "duration_seconds": 5.341,
+        "expected_error": "transcription_degraded",
+        "expected_behavior": "DC offset may cause asymmetric clipping and reduced dynamic range",
+        "parameters": {
+            "offset": 16000
+        }
+    },
+    {
+        "filename": "defect_wrong_sample_rate_slow.raw",
+        "defect_type": "wrong_sample_rate",
+        "description": "Low-pass filtered audio (cutoff 600Hz) simulating slow playback",
+        "duration_seconds": 9.55,
+        "expected_error": "transcription_failed_or_wrong",
+        "expected_behavior": "Spectral centroid below 800Hz triggers wrong_sample_rate detection",
+        "parameters": {
+            "format": "s16le",
+            "sample_rate": 16000,
+            "channels": 1,
+            "filter": "lowpass",
+            "cutoff_hz": 600
+        }
+    },
+    {
+        "filename": "defect_wrong_sample_rate_fast.raw",
+        "defect_type": "wrong_sample_rate",
+        "description": "High-pass filtered audio (cutoff 4500Hz) simulating fast playback",
+        "duration_seconds": 9.55,
+        "expected_error": "transcription_failed_or_wrong",
+        "expected_behavior": "Spectral centroid above 4000Hz triggers wrong_sample_rate detection",
+        "parameters": {
+            "format": "s16le",
+            "sample_rate": 16000,
+            "channels": 1,
+            "filter": "highpass",
+            "cutoff_hz": 4500
+        }
+    },
+    {
+        "filename": "defect_wrong_chunk_small.webm",
+        "defect_type": "wrong_chunk_size",
+        "description": "Only 50ms of audio (800 samples at 16kHz) instead of expected 100ms chunks",
+        "duration_seconds": 0.058,
+        "expected_error": "chunk_too_small",
+        "expected_behavior": "Chunk may be rejected as too short, or buffering issues may occur",
+        "parameters": {
+            "chunk_duration_ms": 50,
+            "expected_chunk_ms": 100,
+            "sample_count": 800
+        }
+    },
+    {
+        "filename": "defect_wrong_chunk_large.webm",
+        "defect_type": "wrong_chunk_size",
+        "description": "200ms of audio (3200 samples at 16kHz) instead of expected 100ms chunks",
+        "duration_seconds": 0.208,
+        "expected_error": "chunk_too_large",
+        "expected_behavior": "Chunk may cause latency issues or be split incorrectly",
+        "parameters": {
+            "chunk_duration_ms": 200,
+            "expected_chunk_ms": 100,
+            "sample_count": 3200
+        }
+    },
+    {
+        "filename": "defect_wrong_byte_order.raw",
+        "defect_type": "wrong_byte_order",
+        "description": "Raw PCM with swapped byte order for direct binary testing",
+        "duration_seconds": 5.334,
+        "expected_error": "audio_corrupted",
+        "expected_behavior": "Raw PCM file for testing byte-order handling without codec interference",
+        "parameters": {
+            "format": "s16le_swapped",
+            "sample_rate": 16000,
+            "channels": 1,
+            "bytes": 170672
+        }
+    },
+    {
+        "filename": "defect_noise_only.webm",
+        "defect_type": "noise_only",
+        "description": "All speech replaced with random samples (white noise)",
+        "duration_seconds": 5.341,
+        "expected_error": "no_speech_detected",
+        "expected_behavior": "VAD may trigger on noise, but transcription should be empty or hallucinated",
+        "parameters": {
+            "noise_type": "uniform_random",
+            "range": [-32768, 32767]
+        }
+    }
+]

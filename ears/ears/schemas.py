@@ -5,6 +5,29 @@ from pydantic import BaseModel
 
 
 # ------------------------------------------------------------------------------
+# debug/diagnostic messages
+# ------------------------------------------------------------------------------
+
+class AudioDefect(BaseModel):
+    """Individual audio defect detected during debug analysis."""
+    code: str              # e.g., "low_volume", "silence", "clipping", "dc_offset"
+    severity: str          # "warning" | "error"
+    message: str           # Human-readable description
+    value: float | None = None       # Measured value (e.g., RMS level, offset)
+    threshold: float | None = None   # Threshold that was exceeded
+
+
+class DebugMessage(BaseModel):
+    """Sent when debug mode is enabled with audio analysis results."""
+    type: Literal["debug"] = "debug"
+    chunk_index: int       # Which chunk this analysis is for
+    sample_count: int      # Number of samples in chunk
+    duration_ms: float     # Chunk duration in milliseconds
+    defects: list[AudioDefect]  # List of detected defects (empty if clean)
+    metrics: dict          # Raw metrics: rms, peak, dc_offset, clipping_ratio, zcr
+
+
+# ------------------------------------------------------------------------------
 # server -> client messages
 # ------------------------------------------------------------------------------
 

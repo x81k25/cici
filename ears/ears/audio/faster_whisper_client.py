@@ -6,6 +6,9 @@ from typing import Optional
 from loguru import logger
 from faster_whisper import WhisperModel
 
+# local imports
+from ears.normalize import normalize_transcription
+
 # ------------------------------------------------------------------------------
 # faster-whisper transcription client
 # ------------------------------------------------------------------------------
@@ -97,6 +100,9 @@ def transcribe_audio(
                 if text_lower == phrase or text_lower == phrase + ".":
                     logger.warning(f"filtered hallucination: {text}")
                     return None
+
+            # apply word alias normalization (e.g., "CeCe" -> "cici")
+            text = normalize_transcription(text)
 
             logger.info(f"transcription result: {text}")
             return text if text else None

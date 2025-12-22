@@ -17,7 +17,7 @@ class TestSession:
     async def test_session_creation(self, session):
         """Test that session is created with correct defaults."""
         assert session.id is not None
-        assert len(session.id) == 8
+        assert session.id == "test"
         assert session.interaction_mode == "ollama"
         assert session.conversation_context == []
         assert session.active_tasks == []
@@ -110,82 +110,3 @@ class TestSession:
         assert "created_at" in data
         assert "last_activity" in data
         assert "idle_seconds" in data
-
-
-# ------------------------------------------------------------------------------
-# SessionManager tests
-# ------------------------------------------------------------------------------
-
-class TestSessionManager:
-    """Tests for the SessionManager class."""
-
-    @pytest.mark.asyncio
-    async def test_create_session(self, session_manager):
-        """Test creating a new session."""
-        session = await session_manager.create_session()
-
-        assert session is not None
-        assert session.id in session_manager.sessions
-        assert session_manager.count == 1
-
-    @pytest.mark.asyncio
-    async def test_max_sessions_limit(self, session_manager):
-        """Test that max sessions limit is enforced."""
-        sessions = []
-
-        # create max sessions
-        for i in range(session_manager.max_sessions):
-            session = await session_manager.create_session()
-            sessions.append(session)
-            assert session is not None
-
-        # try to create one more
-        session = await session_manager.create_session()
-
-        assert session is None
-        assert session_manager.count == session_manager.max_sessions
-
-    @pytest.mark.asyncio
-    async def test_get_session(self, session_manager):
-        """Test getting a session by ID."""
-        session = await session_manager.create_session()
-        retrieved = await session_manager.get_session(session.id)
-
-        assert retrieved is session
-
-    @pytest.mark.asyncio
-    async def test_get_nonexistent_session(self, session_manager):
-        """Test getting a session that doesn't exist."""
-        session = await session_manager.get_session("nonexistent")
-        assert session is None
-
-    @pytest.mark.asyncio
-    async def test_remove_session(self, session_manager):
-        """Test removing a session."""
-        session = await session_manager.create_session()
-        session_id = session.id
-
-        result = await session_manager.remove_session(session_id)
-
-        assert result is True
-        assert session_id not in session_manager.sessions
-        assert session_manager.count == 0
-
-    @pytest.mark.asyncio
-    async def test_remove_nonexistent_session(self, session_manager):
-        """Test removing a session that doesn't exist."""
-        result = await session_manager.remove_session("nonexistent")
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_list_sessions(self, session_manager):
-        """Test listing all sessions."""
-        session1 = await session_manager.create_session()
-        session2 = await session_manager.create_session()
-
-        sessions = await session_manager.list_sessions()
-
-        assert len(sessions) == 2
-        session_ids = [s["session_id"] for s in sessions]
-        assert session1.id in session_ids
-        assert session2.id in session_ids

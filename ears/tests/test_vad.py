@@ -39,7 +39,7 @@ class TestVADProcessor:
         config = VADConfig()
 
         assert config.sample_rate == 16000
-        assert config.min_silence_duration_ms == 600
+        assert config.min_silence_duration_ms == 1000
         assert config.max_buffer_seconds == 30.0
         assert config.speech_threshold == 0.5
 

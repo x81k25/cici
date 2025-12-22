@@ -1,19 +1,17 @@
 """
 MIND - Logic and Routing FastAPI Service
 
-A REST API service that handles:
-- Session management
-- Voice-to-CLI translation
+A stateless REST API service that handles:
+- Transcript buffering (word-by-word from EARS)
+- Text processing (complete commands from FACE)
+- Message buffering (responses for FACE to poll)
 - Command routing (Ollama, CLI, Claude, Claude Code modes)
-- TTS output
 
 Endpoints:
-    POST   /sessions                  Create new session
-    GET    /sessions                  List all sessions
-    GET    /sessions/{id}             Get session state
-    DELETE /sessions/{id}             Kill session
-    POST   /sessions/{id}/process     Process text input
-    POST   /sessions/{id}/cancel      Cancel active tasks
+    POST   /transcript     Buffer partial transcription from EARS, process on "execute"
+    POST   /text           Process complete text input from FACE
+    GET    /messages       Poll for response messages (FACE)
+    GET    /health         Health check
 """
 
 # standard library imports
@@ -24,20 +22,18 @@ from fastapi import FastAPI, HTTPException
 from loguru import logger
 
 # local imports
-from mind.session import Session, SessionManager
+from mind.session import Session
+from mind.transcript_buffer import TranscriptBuffer
+from mind.message_buffer import MessageBuffer
 from mind.input_processor import InputProcessor
 from mind.command_router import CommandRouter
 from mind.schemas import (
-    ProcessTextRequest,
-    SessionResponse,
-    ProcessResponse,
-    StatusResponse,
-    ErrorResponse,
-    ErrorDetail,
+    TranscriptRequest,
+    TranscriptResponse,
+    TextRequest,
+    TextResponse,
+    MessagesResponse,
     ErrorCodes,
-    InputEcho,
-    LLMResponse,
-    CLIResult,
 )
 
 
@@ -45,7 +41,9 @@ from mind.schemas import (
 # Globals
 # ------------------------------------------------------------------------------
 
-session_manager: SessionManager | None = None
+session: Session | None = None
+transcript_buffer: TranscriptBuffer | None = None
+message_buffer: MessageBuffer | None = None
 input_processor: InputProcessor | None = None
 command_router: CommandRouter | None = None
 
@@ -57,17 +55,18 @@ command_router: CommandRouter | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize and cleanup resources."""
-    global session_manager, input_processor, command_router
+    global session, transcript_buffer, message_buffer, input_processor, command_router
 
     logger.info("starting MIND service")
 
     # initialize components
     command_router = CommandRouter()
-    session_manager = SessionManager(
-        max_sessions=10,
-        claude_code_controller=command_router.claude_code_controller
-    )
     input_processor = InputProcessor()
+    transcript_buffer = TranscriptBuffer()
+    message_buffer = MessageBuffer()
+
+    # create single persistent session
+    session = Session(id="main")
 
     logger.info("MIND service ready")
 
@@ -75,9 +74,9 @@ async def lifespan(app: FastAPI):
 
     # cleanup
     logger.info("shutting down MIND service")
-    # kill all sessions
-    for session_id in list(session_manager.sessions.keys()):
-        await session_manager.remove_session(session_id)
+    if session:
+        await session.cancel_active_tasks()
+        session.cleanup()
     logger.info("MIND service shutdown complete")
 
 
@@ -87,244 +86,248 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="MIND - Logic and Routing Service",
-    description="REST API for session management, command routing, and controller execution",
-    version="0.1.0",
+    description="Stateless REST API for command processing and routing",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
 
 # ------------------------------------------------------------------------------
-# Session endpoints
+# Helper functions
 # ------------------------------------------------------------------------------
 
-@app.post("/sessions", response_model=SessionResponse)
-async def create_session():
-    """Create a new session."""
-    session = await session_manager.create_session()
-    if session is None:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "code": ErrorCodes.MAX_SESSIONS,
-                "message": f"Maximum sessions ({session_manager.max_sessions}) reached"
-            }
-        )
+async def process_command(text: str, original_voice: str | None = None) -> None:
+    """
+    Process a command and add the response to the message buffer.
 
-    return SessionResponse(
-        session_id=session.id,
-        mode=session.interaction_mode,
-        current_directory=session.current_directory,
-        created_at=session.created_at.isoformat(),
-        last_activity=session.last_activity.isoformat(),
-    )
-
-
-@app.get("/sessions", response_model=list[SessionResponse])
-async def list_sessions():
-    """List all sessions."""
-    sessions = await session_manager.list_sessions()
-    return [
-        SessionResponse(
-            session_id=s["session_id"],
-            mode=s["mode"],
-            current_directory=s["current_directory"],
-            created_at=s["created_at"],
-            last_activity=s["last_activity"],
-            idle_seconds=s["idle_seconds"],
-        )
-        for s in sessions
-    ]
-
-
-@app.get("/sessions/{session_id}", response_model=SessionResponse)
-async def get_session(session_id: str):
-    """Get session state."""
-    session = await session_manager.get_session(session_id)
-    if session is None:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "code": ErrorCodes.SESSION_NOT_FOUND,
-                "message": f"Session {session_id} not found"
-            }
-        )
-
-    return SessionResponse(
-        session_id=session.id,
-        mode=session.interaction_mode,
-        current_directory=session.current_directory,
-        created_at=session.created_at.isoformat(),
-        last_activity=session.last_activity.isoformat(),
-        idle_seconds=(session.last_activity - session.created_at).total_seconds(),
-    )
-
-
-@app.delete("/sessions/{session_id}", response_model=StatusResponse)
-async def kill_session(session_id: str):
-    """Kill a session."""
-    removed = await session_manager.remove_session(session_id)
-    if not removed:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "code": ErrorCodes.SESSION_NOT_FOUND,
-                "message": f"Session {session_id} not found"
-            }
-        )
-
-    return StatusResponse(status="ok")
-
-
-@app.delete("/sessions", response_model=StatusResponse)
-async def kill_all_sessions():
-    """Kill all sessions."""
-    count = session_manager.count
-    for session_id in list(session_manager.sessions.keys()):
-        await session_manager.remove_session(session_id)
-
-    return StatusResponse(status="ok", killed=count)
-
-
-# ------------------------------------------------------------------------------
-# Processing endpoints
-# ------------------------------------------------------------------------------
-
-@app.post("/sessions/{session_id}/process", response_model=ProcessResponse)
-async def process_text(session_id: str, request: ProcessTextRequest):
-    """Process text input for a session."""
-    session = await session_manager.get_session(session_id)
-    if session is None:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "code": ErrorCodes.SESSION_NOT_FOUND,
-                "message": f"Session {session_id} not found"
-            }
-        )
+    Args:
+        text: The text to process.
+        original_voice: Original voice transcription (for LLM fallback).
+    """
+    global session, input_processor, command_router, message_buffer
 
     try:
         # process the input
-        input_result = await input_processor.process_text(request.text, session)
+        input_result = await input_processor.process_text(text, session)
 
         # check for stop word
         if input_result.get("stop_detected"):
-            return ProcessResponse(
-                session_id=session.id,
-                mode=session.interaction_mode,
-                current_directory=session.current_directory,
-                input=InputEcho(
-                    raw=input_result.get("original"),
-                    translated=None,
-                ),
-                cancelled=True,
-            )
+            await message_buffer.add({
+                "type": "system",
+                "content": "Command cancelled",
+                "cancelled": True,
+            })
+            return
 
         # route the command
-        translated = input_result.get("translated") or request.text
+        translated = input_result.get("translated") or text
         route_result = await command_router.route(
             translated,
             session,
-            original_voice=request.original_voice
+            original_voice=original_voice
         )
 
-        # build response based on route result type
-        response = ProcessResponse(
-            session_id=session.id,
-            mode=session.interaction_mode,
-            current_directory=session.current_directory,
-            input=InputEcho(
-                raw=input_result.get("original"),
-                translated=input_result.get("translated"),
-            ),
-        )
-
+        # build message based on route result type
         result = route_result.get("result", {})
         route_type = route_result.get("type", "")
 
         # mode change responses
         if route_type in ("cli_enter", "ollama_enter", "claude_code_enter"):
             confirmation = route_result.get("confirmation", {})
-            response.llm_response = LLMResponse(
-                success=True,
-                content=confirmation.get("message", "Mode changed"),
-                model="system",
-            )
+            await message_buffer.add({
+                "type": "system",
+                "content": confirmation.get("message", "Mode changed"),
+                "mode_changed": True,
+                "new_mode": session.interaction_mode,
+            })
 
         # Ollama response
         elif route_type == "ollama":
-            response.llm_response = LLMResponse(
-                success=result.get("success", False),
-                content=result.get("response"),
-                model="phi3",
-                error=result.get("error"),
-            )
+            logger.info(f"adding Ollama response to message buffer: {result.get('response', '')[:50]}...")
+            await message_buffer.add({
+                "type": "llm_response",
+                "content": result.get("response"),
+                "model": "phi3",
+                "success": result.get("success", False),
+                "error": result.get("error"),
+            })
 
         # Claude response
         elif route_type == "claude":
-            response.llm_response = LLMResponse(
-                success=result.get("success", False),
-                content=result.get("response"),
-                model=result.get("model", "claude-sonnet"),
-                error=result.get("error"),
-            )
+            await message_buffer.add({
+                "type": "llm_response",
+                "content": result.get("response"),
+                "model": result.get("model", "claude-sonnet"),
+                "success": result.get("success", False),
+                "error": result.get("error"),
+            })
 
         # Claude Code response
         elif route_type == "claude_code":
-            response.llm_response = LLMResponse(
-                success=result.get("success", False),
-                content=result.get("response"),
-                model=result.get("model", "claude-code"),
-                error=result.get("error"),
-            )
+            await message_buffer.add({
+                "type": "llm_response",
+                "content": result.get("response"),
+                "model": result.get("model", "claude-code"),
+                "success": result.get("success", False),
+                "error": result.get("error"),
+            })
 
         # CLI response
         elif route_type in ("cli", "trigger"):
-            response.cli_result = CLIResult(
-                success=result.get("success", False),
-                command=result.get("command", ""),
-                output=result.get("output"),
-                exit_code=result.get("exit_code"),
-                error=result.get("error"),
-                correction_attempted=result.get("correction_attempted", False),
-                original_command=result.get("original_command"),
-                corrected_command=result.get("corrected_command"),
-            )
+            await message_buffer.add({
+                "type": "cli_result",
+                "command": result.get("command", ""),
+                "output": result.get("output"),
+                "exit_code": result.get("exit_code"),
+                "success": result.get("success", False),
+                "error": result.get("error"),
+                "correction_attempted": result.get("correction_attempted", False),
+                "original_command": result.get("original_command"),
+                "corrected_command": result.get("corrected_command"),
+            })
 
         # error response
         elif route_type == "error":
-            response.error = ErrorDetail(
-                code=ErrorCodes.COMMAND_FAILED,
-                message=route_result.get("message", "Unknown error"),
+            await message_buffer.add({
+                "type": "error",
+                "content": route_result.get("message", "Unknown error"),
+                "error": route_result.get("message"),
+            })
+
+    except Exception as e:
+        logger.exception(f"error processing command: {e}")
+        await message_buffer.add({
+            "type": "error",
+            "content": f"Processing error: {str(e)}",
+            "error": str(e),
+        })
+
+
+# ------------------------------------------------------------------------------
+# Transcript endpoint (from EARS)
+# ------------------------------------------------------------------------------
+
+@app.post("/transcript", response_model=TranscriptResponse)
+async def receive_transcript(request: TranscriptRequest):
+    """
+    Receive partial transcription from EARS.
+
+    Words are buffered until "execute" is received,
+    then the full command is processed.
+    """
+    global transcript_buffer, session
+
+    logger.info(f"received transcript from EARS: '{request.text}'")
+
+    if session is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": ErrorCodes.SESSION_NOT_INITIALIZED,
+                "message": "Session not initialized"
+            }
+        )
+
+    # split text into words
+    words = request.text.strip().split()
+
+    for word in words:
+        # check if this is the execute trigger
+        if transcript_buffer.is_execute(word):
+            # get the full command and process it
+            command = await transcript_buffer.get_and_clear()
+
+            if not command:
+                return TranscriptResponse(
+                    status="error",
+                    command=None,
+                    buffer=None,
+                )
+
+            # process the command asynchronously
+            await process_command(command)
+
+            return TranscriptResponse(
+                status="processing",
+                command=command,
+                buffer=None,
             )
 
-        return response
+        # buffer the word
+        await transcript_buffer.add_word(word)
+
+    # return current buffer state
+    return TranscriptResponse(
+        status="buffered",
+        buffer=transcript_buffer.words,
+        command=None,
+    )
+
+
+# ------------------------------------------------------------------------------
+# Text endpoint (from FACE)
+# ------------------------------------------------------------------------------
+
+@app.post("/text", response_model=TextResponse)
+async def receive_text(request: TextRequest):
+    """
+    Receive complete text input from FACE.
+
+    The text is processed immediately.
+    """
+    global session
+
+    if session is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": ErrorCodes.SESSION_NOT_INITIALIZED,
+                "message": "Session not initialized"
+            }
+        )
+
+    try:
+        # process the command
+        await process_command(request.text, request.original_voice)
+
+        return TextResponse(status="ok")
 
     except Exception as e:
         logger.exception(f"error processing text: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "code": ErrorCodes.INTERNAL_ERROR,
-                "message": str(e)
-            }
-        )
+        return TextResponse(status="error", error=str(e))
 
 
-@app.post("/sessions/{session_id}/cancel", response_model=StatusResponse)
-async def cancel_tasks(session_id: str):
-    """Cancel active tasks for a session."""
-    session = await session_manager.get_session(session_id)
+# ------------------------------------------------------------------------------
+# Messages endpoint (for FACE polling)
+# ------------------------------------------------------------------------------
+
+@app.get("/messages", response_model=MessagesResponse)
+async def get_messages():
+    """
+    Get all buffered messages and clear the buffer.
+
+    FACE calls this to poll for new responses.
+    """
+    global message_buffer, session
+
+    logger.info(f"FACE polling /messages (buffer count: {message_buffer.count if message_buffer else 0})")
+
     if session is None:
         raise HTTPException(
-            status_code=404,
+            status_code=503,
             detail={
-                "code": ErrorCodes.SESSION_NOT_FOUND,
-                "message": f"Session {session_id} not found"
+                "code": ErrorCodes.SESSION_NOT_INITIALIZED,
+                "message": "Session not initialized"
             }
         )
 
-    cancelled = await session.cancel_active_tasks()
-    return StatusResponse(status="ok", killed=cancelled)
+    messages = await message_buffer.get_and_clear()
+
+    return MessagesResponse(
+        messages=messages,
+        mode=session.interaction_mode,
+        current_directory=session.current_directory,
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -337,7 +340,9 @@ async def health():
     return {
         "status": "healthy",
         "service": "mind",
-        "sessions": session_manager.count if session_manager else 0,
+        "mode": session.interaction_mode if session else None,
+        "transcript_buffer": transcript_buffer.words if transcript_buffer else [],
+        "pending_messages": message_buffer.count if message_buffer else 0,
     }
 
 

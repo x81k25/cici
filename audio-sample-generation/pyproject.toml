@@ -1,0 +1,12 @@
+[project]
+name = "audio-sample-generation"
+version = "0.1.0"
+description = "Generate defective audio samples for testing"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.11.0",
+]
+
+[project.scripts]
+generate-defective-audio = "generate_defective_audio:main"

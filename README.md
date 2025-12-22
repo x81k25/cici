@@ -6,7 +6,7 @@ A microservices-based personal assistant with voice transcription, command routi
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                           LIPS                                  │
+│                           FACE                                  │
 │                    (Streamlit Frontend)                         │
 │                     http://localhost:8501                       │
 └─────────────────────────────────────────────────────────────────┘
@@ -33,7 +33,7 @@ A microservices-based personal assistant with voice transcription, command routi
 |-----------|-------------|------|----------|
 | **MIND** | Logic and routing service | 8765 | HTTP REST |
 | **EARS** | Audio transcription service | 8766 | WebSocket |
-| **LIPS** | Streamlit frontend UI | 8501 | HTTP |
+| **FACE** | Streamlit frontend UI | 8501 | HTTP |
 
 ### MIND - Logic & Routing
 
@@ -55,7 +55,7 @@ WebSocket service for pure audio transcription:
 
 See [`ears/README.md`](ears/README.md) for details.
 
-### LIPS - Frontend
+### FACE - Frontend
 
 Streamlit-based web UI:
 - Text input with voice-style syntax
@@ -63,7 +63,7 @@ Streamlit-based web UI:
 - Mode switching
 - Command result display
 
-See [`lips/README.md`](lips/README.md) for details.
+See [`face/README.md`](face/README.md) for details.
 
 ## Quick Start
 
@@ -83,10 +83,10 @@ uv sync
 uv run python -m ears.main
 ```
 
-### 3. Start LIPS (frontend)
+### 3. Start FACE (frontend)
 
 ```bash
-cd lips
+cd face
 uv sync
 uv run streamlit run app.py
 ```
@@ -95,9 +95,9 @@ Open http://localhost:8501 in your browser.
 
 ## Inter-Service Communication
 
-### LIPS → MIND
+### FACE → MIND
 
-LIPS communicates with MIND via REST API:
+FACE communicates with MIND via REST API:
 
 ```bash
 # Create session
@@ -110,12 +110,12 @@ POST /sessions/{id}/process → {input, llm_response, cli_result, ...}
 GET /sessions → [{session_id, mode, idle_seconds}, ...]
 ```
 
-### LIPS → EARS (future)
+### FACE → EARS (future)
 
-When voice input is added, LIPS will stream audio to EARS:
+When voice input is added, FACE will stream audio to EARS:
 
 ```
-LIPS ──WebSocket──▶ EARS ──transcription──▶ LIPS ──text──▶ MIND
+FACE ──WebSocket──▶ EARS ──transcription──▶ FACE ──text──▶ MIND
 ```
 
 ## Interaction Modes
@@ -146,17 +146,20 @@ cd mind && uv run pytest tests/ -v
 # EARS tests
 cd ears && uv run pytest tests/ -v
 
-# LIPS tests (if any)
-cd lips && uv run pytest tests/ -v
+# FACE tests (if any)
+cd face && uv run pytest tests/ -v
 ```
 
 ### Project Structure
 
 ```
 cici/
-├── mind/           # Logic & routing service
-├── ears/           # Transcription service
-├── lips/           # Frontend UI
-├── README.md       # This file (inter-service docs)
-└── CLAUDE.md       # Development instructions
+├── mind/                      # Logic & routing service
+├── ears/                      # Transcription service
+├── face/                      # Frontend UI
+├── tests/                     # Integration tests (FACE↔EARS)
+├── audio-sample-generation/   # Tool to generate test audio with defects
+├── docs/                      # Architecture documentation
+├── README.md                  # This file (inter-service docs)
+└── CLAUDE.md                  # Development instructions
 ```

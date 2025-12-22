@@ -21,32 +21,60 @@ uv run uvicorn mind.main:app --reload --port 8765
 
 # Or use the CLI
 uv run python -m mind.main
+
+# Kill foreground process
+Ctrl+C
+
+# Kill background process (by name)
+pkill -f "mind.main"
+
+# Kill background process (by port)
+lsof -ti :8765 | xargs kill
 ```
 
 ## REST API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/sessions` | Create new session |
-| GET | `/sessions` | List all sessions |
-| GET | `/sessions/{id}` | Get session state |
-| DELETE | `/sessions/{id}` | Kill session |
-| POST | `/sessions/{id}/process` | Process text input |
-| POST | `/sessions/{id}/cancel` | Cancel active tasks |
+| POST | `/transcript` | Buffer partial transcription from EARS (1+ words), process on "execute" |
+| POST | `/text` | Process complete text input from FACE |
+| GET | `/messages` | Poll for response messages (FACE) |
+| GET | `/health` | Health check |
 
-## Example Usage
+## EARS → MIND Protocol
+
+EARS sends partial transcriptions to MIND as speech is recognized:
 
 ```bash
-# Create a session
-curl -X POST http://localhost:8765/sessions
+# Send partial transcription (1+ words)
+curl -X POST http://localhost:8765/transcript \
+  -H "Content-Type: application/json" \
+  -d '{"text": "list files"}'
+# Response: {"status": "buffered", "buffer": ["list", "files"], "command": null}
 
-# Process text
-curl -X POST http://localhost:8765/sessions/{session_id}/process \
+# When user says "execute", command is processed
+curl -X POST http://localhost:8765/transcript \
+  -H "Content-Type: application/json" \
+  -d '{"text": "execute"}'
+# Response: {"status": "processing", "command": "list files", "buffer": null}
+
+# Poll for results
+curl http://localhost:8765/messages
+```
+
+## FACE → MIND Protocol
+
+FACE sends complete text (typed input):
+
+```bash
+# Process complete text
+curl -X POST http://localhost:8765/text \
   -H "Content-Type: application/json" \
   -d '{"text": "list files in current directory"}'
+# Response: {"status": "ok"}
 
-# List sessions
-curl http://localhost:8765/sessions
+# Poll for results
+curl http://localhost:8765/messages
 ```
 
 ## Running Tests

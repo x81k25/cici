@@ -1,0 +1,14 @@
+{
+    "_comment": "Maps Whisper transcription variations to canonical forms. Keys are lowercase, matching is case-insensitive.",
+    "aliases": {
+        "cece": "cici",
+        "cc": "cici",
+        "cici": "cici",
+        "csc": "cici",
+        "sisi": "cici",
+        "sissy": "cici",
+        "c c": "cici",
+        "see see": "cici",
+        "seesee": "cici"
+    }
+}

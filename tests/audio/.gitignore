@@ -1,0 +1,10 @@
+# Audio test files
+*.webm
+*.raw
+*.wav
+*.mp3
+*.ogg
+
+# Keep metadata
+!transcriptions.json
+!defective/defects.json

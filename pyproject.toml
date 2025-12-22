@@ -1,0 +1,52 @@
+[project]
+name = "cici"
+version = "0.1.0"
+description = "Voice and text personal assistant - integration tests and coordination"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # Core dependencies shared across modules for integration testing
+    "loguru>=0.7.0",
+    "pydantic>=2.12.5",
+    "pydub>=0.25.1",
+    "python-dotenv>=1.2.1",
+    "websockets>=12.0",
+    # EARS dependencies (needed for integration tests)
+    "faster-whisper>=1.2.1",
+    "silero-vad>=6.2.0",
+    "torch>=2.0.0",
+    "numpy>=2.3.5",
+    # MIND dependencies (needed for FACE↔MIND integration tests)
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
+    "httpx>=0.28.1",
+    "pyyaml>=6.0",
+    # FACE dependencies (needed for Streamlit app tests)
+    "streamlit>=1.40.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# This is a coordination/testing package only, no source to ship
+packages = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]

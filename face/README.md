@@ -1,11 +1,12 @@
-# LIPS - Frontend UI
+# FACE - Frontend UI
 
 Streamlit-based frontend UI for the cici voice and text-based personal assistant.
 
 ## Overview
 
-LIPS provides a browser-based interface for interacting with the MIND REST API:
+FACE provides a browser-based interface for interacting with MIND and EARS:
 - Text input with voice-style syntax
+- Audio streaming to EARS for transcription (via AudioWorklet)
 - Session management (create, join, kill)
 - Real-time command results display
 - Mode switching (Ollama, CLI, Claude Code)
@@ -24,7 +25,7 @@ The UI will be available at http://localhost:8501
 
 ## Backend Connection
 
-LIPS connects to the MIND REST API:
+FACE connects to the MIND REST API:
 
 | Environment | URL |
 |-------------|-----|
@@ -41,12 +42,30 @@ CICI_API_SECURE=false
 ## Architecture
 
 ```
-lips/
-├── app.py           # Main Streamlit application
-├── mind_client.py   # HTTP client for MIND REST API
-├── .env             # Configuration
-└── pyproject.toml   # Dependencies
+face/
+├── app.py              # Main Streamlit application
+├── mind_client.py      # HTTP client for MIND REST API
+├── utils/
+│   ├── audio_streamer.py  # AudioWorklet-based streaming to EARS
+│   └── audio_recorder.py  # Local recording component
+├── pages/
+│   └── testing.py      # Audio testing benchmarks
+├── .env                # Configuration
+└── pyproject.toml      # Dependencies
 ```
+
+## Audio Streaming
+
+FACE streams audio to EARS using the Web Audio API's AudioWorklet:
+
+**Audio Format (sent to EARS)**:
+- Raw PCM Int16 (no container)
+- 16000 Hz sample rate
+- Mono (1 channel)
+
+The testing page (`pages/testing.py`) provides benchmarks for:
+1. **Local Recording** - Record and playback locally
+2. **WebSocket Streaming** - Stream to EARS and view transcriptions
 
 ## Usage
 
@@ -94,7 +113,29 @@ Type commands using natural speech patterns:
 ## Running Tests
 
 ```bash
-uv run pytest tests/ -v
+# Install dev dependencies
+uv sync --extra dev
+
+# Unit tests (fast, no services needed)
+uv run pytest tests/test_audio_apptest.py -v
+
+# Playwright E2E tests (requires FACE + EARS running)
+uv run pytest tests/test_audio_chat.py -v
+```
+
+### Test Files
+
+| File | Type | Description |
+|------|------|-------------|
+| `test_audio_apptest.py` | Unit | Audio config, processor, constants (16 tests) |
+| `test_audio_chat.py` | E2E | Playwright browser tests with Firefox |
+
+### Integration Tests
+
+FACE → EARS integration tests are in the root `/tests/` directory:
+```bash
+cd /infra/experiments/cici
+uv run pytest tests/test_face_ears_integration.py -v
 ```
 
 ## Stopping the Frontend
