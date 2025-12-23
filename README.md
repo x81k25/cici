@@ -33,6 +33,7 @@ A microservices-based personal assistant with voice transcription, command routi
 |-----------|-------------|------|----------|
 | **MIND** | Logic and routing service | 8765 | HTTP REST |
 | **EARS** | Audio transcription service | 8766 | WebSocket |
+| **MOUTH** | Text-to-speech service | 8001 | HTTP REST |
 | **FACE** | Streamlit frontend UI | 8501 | HTTP |
 
 ### MIND - Logic & Routing
@@ -64,6 +65,15 @@ Streamlit-based web UI:
 - Command result display
 
 See [`face/README.md`](face/README.md) for details.
+
+### MOUTH - Text-to-Speech
+
+FastAPI service for TTS synthesis:
+- Piper TTS integration
+- Queue-based audio generation
+- WAV audio output (22050Hz)
+
+See [`mouth/README.md`](mouth/README.md) for details.
 
 ## Quick Start
 
@@ -135,6 +145,67 @@ All modes are managed by MIND:
 | Ollama | LLM inference | `http://192.168.50.2:31435` |
 | Anthropic API | Claude queries | `https://api.anthropic.com` |
 
+## Docker Images
+
+Pre-built Docker images are available from GitHub Container Registry (GHCR).
+
+### Container Registry
+
+All images are published to: `ghcr.io/x81k25/cici-<service>`
+
+| Service | Image URL |
+|---------|-----------|
+| **MIND** | `ghcr.io/x81k25/cici-mind` |
+| **EARS** | `ghcr.io/x81k25/cici-ears` |
+| **MOUTH** | `ghcr.io/x81k25/cici-mouth` |
+| **FACE** | `ghcr.io/x81k25/cici-face` |
+
+### Image Tags
+
+Images are tagged based on the git branch and event:
+
+| Tag | Description | When Updated |
+|-----|-------------|--------------|
+| `dev` | Development branch | Push to `dev` branch |
+| `main` | Production branch | Push to `main` branch |
+| `latest` | Alias for `main` | Push to `main` branch |
+| `sha-<commit>` | Specific commit | Every push |
+| `pr-<number>` | Pull request build | PR to `main` |
+
+**Note:** Both `dev` and `main` tags are always available. Use `dev` for testing latest changes, `main`/`latest` for stable releases.
+
+### Pulling Images
+
+```bash
+# Pull dev versions
+docker pull ghcr.io/x81k25/cici-mind:dev
+docker pull ghcr.io/x81k25/cici-ears:dev
+docker pull ghcr.io/x81k25/cici-mouth:dev
+docker pull ghcr.io/x81k25/cici-face:dev
+
+# Pull stable versions
+docker pull ghcr.io/x81k25/cici-mind:latest
+docker pull ghcr.io/x81k25/cici-ears:latest
+docker pull ghcr.io/x81k25/cici-mouth:latest
+docker pull ghcr.io/x81k25/cici-face:latest
+```
+
+### Running with Docker Compose
+
+```bash
+# Start all services
+docker compose up -d
+
+# Check status
+docker compose ps
+
+# View logs
+docker compose logs -f
+
+# Stop all services
+docker compose down
+```
+
 ## Development
 
 ### Running Tests
@@ -156,10 +227,10 @@ cd face && uv run pytest tests/ -v
 cici/
 ├── mind/                      # Logic & routing service
 ├── ears/                      # Transcription service
+├── mouth/                     # Text-to-speech service
 ├── face/                      # Frontend UI
-├── tests/                     # Integration tests (FACE↔EARS)
-├── audio-sample-generation/   # Tool to generate test audio with defects
-├── docs/                      # Architecture documentation
-├── README.md                  # This file (inter-service docs)
-└── CLAUDE.md                  # Development instructions
+├── tests/                     # Integration tests
+├── .env.example               # Configuration template
+├── docker-compose.yml         # Container orchestration
+└── README.md                  # This file
 ```
