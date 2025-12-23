@@ -23,20 +23,48 @@ uv run streamlit run app.py
 
 The UI will be available at http://localhost:8501
 
-## Backend Connection
+## Configuration
 
-FACE connects to the MIND REST API:
+FACE uses a two-tier configuration system:
 
-| Environment | URL |
-|-------------|-----|
-| Development | `http://localhost:8765` |
-| Production (SSL) | `https://your-host:8765` |
+**Root `.env`** (shared across services):
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MIND_HOST` | `localhost` | MIND service host |
+| `MIND_PORT` | `8765` | MIND service port |
+| `EARS_HOST` | `localhost` | EARS service host |
+| `EARS_PORT` | `8766` | EARS service port |
+| `MOUTH_HOST` | `localhost` | MOUTH service host |
+| `MOUTH_PORT` | `8001` | MOUTH service port |
+| `SAMPLE_RATE` | `16000` | Audio sample rate (Hz) |
+| `LOG_LEVEL` | `INFO` | Logging level |
 
-Configuration via `.env`:
-```bash
-CICI_API_HOST=localhost
-CICI_API_PORT=8765
-CICI_API_SECURE=false
+**Browser-Accessible URLs** (for non-localhost deployments):
+| Variable | Description |
+|----------|-------------|
+| `CICI_EARS_WS_URL` | Override EARS WebSocket URL (e.g., `ws://your-host:8766`) |
+| `CICI_MOUTH_URL` | Override MOUTH HTTP URL (e.g., `http://your-host:8001`) |
+
+**Module `config/config.yaml`** (FACE-specific tuning):
+```yaml
+audio:
+  chunk_duration_ms: 100     # Audio chunk size for streaming
+  echo_cancellation: true
+  noise_suppression: true
+  auto_gain_control: true
+
+webrtc:
+  ice_servers:
+    - "stun:stun.l.google.com:19302"
+
+timeouts:
+  connect: 5.0               # General connection timeout
+  llm_request: 120.0         # LLM request timeout (can be slow)
+  health_check: 2.0
+
+ui:
+  max_log_messages: 50
+  audio_refresh_interval: 1.0
 ```
 
 ## Architecture

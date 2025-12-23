@@ -99,25 +99,60 @@ MIND supports three interaction modes:
 
 See [`docs/modes.md`](docs/modes.md) for detailed mode diagrams.
 
+## Configuration
+
+MIND uses a two-tier configuration system:
+
+**Root `.env`** (shared across services):
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MIND_HOST` | `localhost` | Host to bind to |
+| `MIND_PORT` | `8765` | Port to bind to |
+| `MOUTH_HOST` | `localhost` | MOUTH TTS service host |
+| `MOUTH_PORT` | `8001` | MOUTH TTS service port |
+| `OLLAMA_HOST` | `http://192.168.50.2:31435` | Ollama LLM server URL |
+| `OLLAMA_MODEL` | `phi3` | Ollama model name |
+| `CLAUDE_MODEL` | `claude-sonnet-4-20250514` | Claude model for API calls |
+| `LOG_LEVEL` | `INFO` | Logging level |
+| `DEFAULT_CWD` | `/infra/experiments/cici` | Default working directory |
+
+**Module `config/config.yaml`** (MIND-specific tuning):
+```yaml
+llm:
+  timeout: 60.0          # LLM request timeout (seconds)
+  max_tokens: 1024       # Max tokens for Claude responses
+  claude_display_name: "claude-sonnet"
+
+tts:
+  enabled: true          # Enable TTS integration
+  timeout: 5.0           # TTS request timeout (seconds)
+```
+
 ## Architecture
 
 ```
 mind/
-├── main.py              # FastAPI server
-├── session.py           # Session management
-├── input_processor.py   # Text processing (no audio)
-├── command_router.py    # Command routing logic
-├── schemas.py           # Pydantic schemas
-├── controllers/
-│   ├── cli.py           # CLI command execution
-│   ├── claude.py        # Claude API (stateless)
-│   ├── claude_code.py   # Claude Agent SDK (stateful)
-│   └── ollama.py        # Ollama LLM
-└── core/
-    ├── commands.py      # Command trigger detection
-    ├── prompts.py       # System prompt loading
-    ├── translation.py   # Voice-to-CLI translation
-    ├── session_logger.py # Logging
-    ├── tmux_session.py  # Tmux management
-    └── tts.py           # Text-to-speech
+├── mind/
+│   ├── main.py              # FastAPI server
+│   ├── session.py           # Session management
+│   ├── input_processor.py   # Text processing (no audio)
+│   ├── command_router.py    # Command routing logic
+│   ├── schemas.py           # Pydantic schemas
+│   ├── controllers/
+│   │   ├── cli.py           # CLI command execution
+│   │   ├── claude.py        # Claude API (stateless)
+│   │   ├── claude_code.py   # Claude Agent SDK (stateful)
+│   │   └── ollama.py        # Ollama LLM
+│   └── core/
+│       ├── commands.py      # Command trigger detection
+│       ├── prompts.py       # System prompt loading
+│       ├── translation.py   # Voice-to-CLI translation
+│       ├── session_logger.py # Logging
+│       ├── tmux_session.py  # Tmux management
+│       └── tts.py           # Text-to-speech
+└── config/
+    ├── config.yaml          # Module configuration
+    ├── commands.yaml        # Mode trigger phrases
+    ├── system-prompts.yaml  # LLM system prompts
+    └── translations.yaml    # Voice-to-CLI mappings
 ```

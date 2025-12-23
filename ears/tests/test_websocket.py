@@ -169,10 +169,7 @@ class TestServerMain:
 
     def test_default_port(self):
         """Test that EARS uses port 8766 by default (different from main cici)."""
-        import inspect
-        from ears.main import run_server
+        from ears.config import config
 
-        sig = inspect.signature(run_server)
-        port_default = sig.parameters["port"].default
-
-        assert port_default == 8766
+        # Config provides the default port value
+        assert config.ears_port == 8766

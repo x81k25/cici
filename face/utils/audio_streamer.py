@@ -27,9 +27,14 @@ TARGET_CHANNELS = 1
 
 @dataclass
 class AudioStreamerConfig:
-    """Configuration for the audio streamer component."""
+    """Configuration for the audio streamer component.
 
-    websocket_url: str = "ws://localhost:8766/?debug=true"
+    Note: websocket_url default is base URL without debug. Debug mode is
+    controlled by the caller via config.ears_ws_url which appends ?debug=true
+    when EARS_DEBUG=true.
+    """
+
+    websocket_url: str = "ws://localhost:8766"
     chunk_duration_ms: int = 100
 
 

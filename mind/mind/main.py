@@ -408,10 +408,11 @@ async def health():
 if __name__ == "__main__":
     import argparse
     import uvicorn
+    from mind.config import config
 
     parser = argparse.ArgumentParser(description="MIND logic and routing server")
-    parser.add_argument("--host", default="0.0.0.0", help="host to bind to")
-    parser.add_argument("--port", type=int, default=8765, help="port to bind to")
+    parser.add_argument("--host", default=config.mind_host, help="host to bind to")
+    parser.add_argument("--port", type=int, default=config.mind_port, help="port to bind to")
     parser.add_argument("--reload", action="store_true", help="enable auto-reload")
     parser.add_argument("--debug", action="store_true", help="enable debug logging")
 

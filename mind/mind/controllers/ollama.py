@@ -1,20 +1,16 @@
 # standard library imports
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 # 3rd-party imports
 import httpx
 from loguru import logger
 
 # local imports
+from mind.config import config
 from mind.core.prompts import get_prompt
 
 if TYPE_CHECKING:
     from mind.session import Session
-
-
-# Ollama server configuration
-OLLAMA_HOST = "http://192.168.50.2:31435"
-OLLAMA_MODEL = "phi3"
 
 
 class OllamaController:
@@ -25,17 +21,17 @@ class OllamaController:
     Maintains conversation context via session.conversation_context.
     """
 
-    def __init__(self, host: str = OLLAMA_HOST, model: str = OLLAMA_MODEL):
+    def __init__(self, host: Optional[str] = None, model: Optional[str] = None):
         """
         Initialize the Ollama controller.
 
         Args:
-            host: URL of the Ollama server.
-            model: Model name to use for inference.
+            host: URL of the Ollama server (defaults to config).
+            model: Model name to use for inference (configured externally on Ollama).
         """
-        self.host = host
-        self.model = model
-        self.timeout = 60.0  # LLM responses can be slow
+        self.host = host or config.ollama_host
+        self.model = model or config.ollama_model
+        self.timeout = config.llm_timeout
 
     async def connect(self) -> bool:
         """

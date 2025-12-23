@@ -25,24 +25,19 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 # 3rd-party imports
-from dotenv import load_dotenv
 import httpx
 from loguru import logger
 import websockets
 from websockets.server import serve, WebSocketServerProtocol
 
 # local imports
+from ears.config import config
 from ears.audio.vad_processor import create_vad_processor
 from ears.audio.audio_analyzer import AudioAnalyzer
 
-# load environment variables from ears/.env (relative to this module)
-_env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(_env_path)
-
-# configure logging level from environment
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+# configure logging level from config
 logger.remove()  # remove default handler
-logger.add(lambda msg: print(msg, end=""), level=LOG_LEVEL)
+logger.add(lambda msg: print(msg, end=""), level=config.log_level)
 
 from ears.schemas import (
     ListeningMessage,
@@ -52,10 +47,6 @@ from ears.schemas import (
     DebugMessage,
     AudioDefect,
 )
-
-# configuration
-SILENCE_DURATION_MS = int(os.getenv("EARS_SILENCE_DURATION_MS", "1000"))
-MIND_URL = os.getenv("EARS_MIND_URL", "http://localhost:8765")
 
 
 # ------------------------------------------------------------------------------
@@ -67,7 +58,7 @@ async def forward_to_mind(text: str):
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.post(
-                f"{MIND_URL}/transcript",
+                f"{config.mind_url}/transcript",
                 json={"text": text}
             )
             logger.debug(f"MIND response: {response.json()}")
@@ -97,7 +88,7 @@ async def handle_audio_stream(websocket: WebSocketServerProtocol, debug_mode: bo
     }
 
     # Create VAD processor for this connection
-    vad_processor = create_vad_processor(min_silence_duration_ms=SILENCE_DURATION_MS)
+    vad_processor = create_vad_processor(min_silence_duration_ms=config.silence_duration_ms)
 
     # Create audio analyzer if debug mode is enabled
     analyzer = AudioAnalyzer() if debug_mode else None
@@ -221,15 +212,18 @@ async def handler(websocket: WebSocketServerProtocol):
 # server startup
 # ------------------------------------------------------------------------------
 
-async def main(host: str = "0.0.0.0", port: int = 8766, ssl_context=None):
+async def main(host: str = None, port: int = None, ssl_context=None):
     """
     Start the EARS WebSocket server.
 
     Args:
-        host: Host to bind to.
-        port: Port to bind to.
+        host: Host to bind to (defaults to config).
+        port: Port to bind to (defaults to config).
         ssl_context: Optional SSL context for secure connections.
     """
+    host = host or config.ears_host
+    port = port or config.ears_port
+
     logger.info(f"starting EARS transcription server on {host}:{port}")
 
     # Handle shutdown gracefully
@@ -243,7 +237,15 @@ async def main(host: str = "0.0.0.0", port: int = 8766, ssl_context=None):
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, signal_handler)
 
-    async with serve(handler, host, port, ssl=ssl_context, ping_interval=30, ping_timeout=120):
+    ws_config = config.websocket
+    async with serve(
+        handler,
+        host,
+        port,
+        ssl=ssl_context,
+        ping_interval=ws_config.ping_interval,
+        ping_timeout=ws_config.ping_timeout
+    ):
         protocol = "wss" if ssl_context else "ws"
         logger.info(f"EARS server running on {protocol}://{host}:{port}")
         logger.info("send raw PCM audio (Int16, 16kHz, mono) to receive transcriptions")
@@ -252,17 +254,20 @@ async def main(host: str = "0.0.0.0", port: int = 8766, ssl_context=None):
     logger.info("server shutdown complete")
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8766, ssl_cert: str | None = None, ssl_key: str | None = None):
+def run_server(host: str = None, port: int = None, ssl_cert: str | None = None, ssl_key: str | None = None):
     """
     Run the EARS WebSocket server (blocking).
 
     Args:
-        host: Host to bind to.
-        port: Port to bind to (default 8766, different from main cici server).
+        host: Host to bind to (defaults to config).
+        port: Port to bind to (defaults to config).
         ssl_cert: Path to SSL certificate file.
         ssl_key: Path to SSL key file.
     """
     import ssl
+
+    host = host or config.ears_host
+    port = port or config.ears_port
 
     ssl_context = None
     if ssl_cert and ssl_key:
@@ -277,8 +282,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="EARS transcription server")
-    parser.add_argument("--host", default="0.0.0.0", help="host to bind to")
-    parser.add_argument("--port", type=int, default=8766, help="port to bind to")
+    parser.add_argument("--host", default=config.ears_host, help="host to bind to")
+    parser.add_argument("--port", type=int, default=config.ears_port, help="port to bind to")
     parser.add_argument("--ssl-cert", help="path to SSL certificate")
     parser.add_argument("--ssl-key", help="path to SSL key")
     parser.add_argument("--debug", action="store_true", help="enable debug logging")

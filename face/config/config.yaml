@@ -1,0 +1,48 @@
+# =============================================================================
+# FACE Configuration
+# =============================================================================
+# Module-specific settings for the FACE frontend UI.
+# Service endpoints and shared settings are in the root .env file.
+
+# -----------------------------------------------------------------------------
+# Audio Processing
+# -----------------------------------------------------------------------------
+audio:
+  # Duration of audio chunks to send to EARS (ms)
+  chunk_duration_ms: 100
+
+  # WebRTC audio constraints
+  echo_cancellation: true
+  noise_suppression: true
+  auto_gain_control: true
+
+# -----------------------------------------------------------------------------
+# WebRTC
+# -----------------------------------------------------------------------------
+webrtc:
+  # STUN/TURN servers for ICE negotiation
+  ice_servers:
+    - "stun:stun.l.google.com:19302"
+
+# -----------------------------------------------------------------------------
+# HTTP Timeouts (seconds)
+# -----------------------------------------------------------------------------
+timeouts:
+  # General connection timeout
+  connect: 5.0
+
+  # Timeout for LLM requests (can be slow)
+  llm_request: 120.0
+
+  # Health check timeout
+  health_check: 2.0
+
+# -----------------------------------------------------------------------------
+# UI Settings
+# -----------------------------------------------------------------------------
+ui:
+  # Maximum messages to display in log
+  max_log_messages: 50
+
+  # Auto-refresh interval during audio streaming (seconds)
+  audio_refresh_interval: 1.0

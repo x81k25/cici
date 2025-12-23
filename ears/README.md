@@ -30,6 +30,8 @@ pkill -f "ears.main"
 
 # Kill background process (by port)
 lsof -ti :8766 | xargs kill
+# or
+fuser -k 8766/tcp
 ```
 
 ## WebSocket Protocol
@@ -101,12 +103,42 @@ Debug mode analyzes each audio chunk for potential issues:
 
 ## Configuration
 
-Environment variables in `.env`:
+EARS uses a two-tier configuration system:
 
+**Root `.env`** (shared across services):
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `EARS_SILENCE_DURATION_MS` | `1000` | Silence duration (ms) to trigger transcription after speech. Lower = faster response but may cut off mid-thought. Higher = waits longer for natural pauses. |
-| `EARS_MIND_URL` | `http://localhost:8765` | MIND service URL for forwarding transcriptions. |
+| `EARS_HOST` | `localhost` | Host to bind to |
+| `EARS_PORT` | `8766` | Port to bind to |
+| `MIND_HOST` | `localhost` | MIND service host |
+| `MIND_PORT` | `8765` | MIND service port |
+| `SAMPLE_RATE` | `16000` | Audio sample rate (Hz) |
+| `EARS_SILENCE_DURATION_MS` | `1000` | Silence duration to trigger transcription |
+| `LOG_LEVEL` | `INFO` | Logging level |
+
+**Module `ears/config/config.yaml`** (EARS-specific tuning):
+```yaml
+vad:
+  speech_threshold: 0.5       # VAD probability threshold
+  min_speech_duration_ms: 250 # Minimum speech to process
+  speech_pad_ms: 100          # Padding around speech
+  max_buffer_seconds: 30.0    # Max buffer before flush
+
+whisper:
+  model_size: "small"         # tiny, base, small, medium, large-v3
+  device: "cpu"               # cpu or cuda
+  compute_type: "int8"        # int8 (CPU) or float16 (GPU)
+  language: "en"
+  beam_size: 5
+
+websocket:
+  ping_interval: 30
+  ping_timeout: 120
+
+hallucination_phrases:        # Phrases to filter out
+  - "thank you"
+  - "thanks for watching"
+```
 
 ## EARS → MIND Integration
 

@@ -91,15 +91,34 @@ Get next completed audio chunk.
 
 ## Configuration
 
-Environment variables (prefix `TTS_`):
+MOUTH uses a two-tier configuration system:
 
+**Root `.env`** (shared across services):
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `TTS_MAX_QUEUE_DEPTH` | 10 | Max pending queue size |
-| `TTS_PIPER_MODEL_PATH` | `/models/en_US-lessac-medium.onnx` | Piper model file |
-| `TTS_PIPER_CONFIG_PATH` | `/models/en_US-lessac-medium.onnx.json` | Piper config file |
-| `TTS_SAMPLE_RATE` | 22050 | Output audio sample rate |
-| `TTS_PORT` | 8001 | Server port |
+| `MOUTH_HOST` | `localhost` | Host to bind to |
+| `MOUTH_PORT` | `8001` | Port to bind to |
+| `LOG_LEVEL` | `INFO` | Logging level |
+
+**Module `config/config.yaml`** (MOUTH-specific tuning):
+```yaml
+queue:
+  max_depth: 10              # Max pending items (drops oldest on overflow)
+
+piper:
+  model_path: "models/en_GB-jenny_dioco-medium.onnx"
+  config_path: "models/en_GB-jenny_dioco-medium.onnx.json"
+  sample_rate: 22050         # Output sample rate (determined by model)
+  audio_format: "wav"
+```
+
+**Legacy Environment Variables** (still supported via pydantic-settings):
+| Variable | Description |
+|----------|-------------|
+| `TTS_MAX_QUEUE_DEPTH` | Override queue.max_depth |
+| `TTS_PIPER_MODEL_PATH` | Override piper.model_path |
+| `TTS_PIPER_CONFIG_PATH` | Override piper.config_path |
+| `TTS_SAMPLE_RATE` | Override piper.sample_rate |
 
 ## Development
 

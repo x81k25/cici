@@ -5,11 +5,8 @@ from typing import Optional
 import httpx
 from loguru import logger
 
-
-# TTS service configuration
-TTS_SERVICE_URL = "http://localhost:8001"
-TTS_TIMEOUT = 5.0
-TTS_ENABLED = True
+# local imports
+from mind.config import config
 
 
 async def send_to_tts(sentence: str, request_id: Optional[str] = None) -> bool:
@@ -23,7 +20,7 @@ async def send_to_tts(sentence: str, request_id: Optional[str] = None) -> bool:
     Returns:
         True if accepted, False if failed (non-blocking either way)
     """
-    if not TTS_ENABLED:
+    if not config.tts_enabled:
         return False
 
     if not sentence or not sentence.strip():
@@ -32,12 +29,12 @@ async def send_to_tts(sentence: str, request_id: Optional[str] = None) -> bool:
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
-                f"{TTS_SERVICE_URL}/synthesize",
+                f"{config.mouth_url}/synthesize",
                 json={
                     "text": sentence.strip(),
                     "request_id": request_id
                 },
-                timeout=TTS_TIMEOUT
+                timeout=config.tts_timeout
             )
 
             if response.status_code == 202:
@@ -55,13 +52,13 @@ async def send_to_tts(sentence: str, request_id: Optional[str] = None) -> bool:
 
 async def check_tts_health() -> bool:
     """Check if the TTS service is available."""
-    if not TTS_ENABLED:
+    if not config.tts_enabled:
         return False
 
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                f"{TTS_SERVICE_URL}/health",
+                f"{config.mouth_url}/health",
                 timeout=2.0
             )
             return response.status_code == 200

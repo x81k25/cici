@@ -1,0 +1,28 @@
+# =============================================================================
+# MOUTH Configuration
+# =============================================================================
+# Module-specific settings for the MOUTH TTS service.
+# Service endpoints and shared settings are in the root .env file.
+
+# -----------------------------------------------------------------------------
+# Queue Settings
+# -----------------------------------------------------------------------------
+queue:
+  # Maximum pending items before oldest is dropped
+  max_depth: 10
+
+# -----------------------------------------------------------------------------
+# Piper TTS Settings
+# -----------------------------------------------------------------------------
+piper:
+  # Path to Piper ONNX model (relative to module root)
+  model_path: "models/en_GB-jenny_dioco-medium.onnx"
+
+  # Path to Piper config JSON (relative to module root)
+  config_path: "models/en_GB-jenny_dioco-medium.onnx.json"
+
+  # Output sample rate (Hz) - determined by model
+  sample_rate: 22050
+
+  # Audio format for output
+  audio_format: "wav"
