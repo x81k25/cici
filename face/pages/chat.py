@@ -12,6 +12,7 @@ import numpy as np
 import streamlit as st
 from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
+from config import config
 from mind_client import MindClient, ConnectionState
 from mouth_client import MouthClient
 
@@ -24,16 +25,16 @@ def check_mind_health(api_url: str) -> bool:
     """Check MIND health with 60-second cache."""
     try:
         import httpx
-        with httpx.Client(timeout=2.0) as http_client:
+        with httpx.Client(timeout=config.timeouts.health_check) as http_client:
             resp = http_client.get(f"{api_url}/health")
             return resp.status_code == 200
     except Exception:
         return False
 
-API_URL = st.session_state.get("api_url", "http://localhost:8765")
-EARS_WS_URL = os.getenv("CICI_EARS_WS_URL", "ws://localhost:8766/?debug=true")
-MOUTH_URL = os.getenv("CICI_MOUTH_URL", "http://localhost:8001")
-TARGET_SAMPLE_RATE = 16000
+API_URL = st.session_state.get("api_url", config.mind_url)
+EARS_WS_URL = config.ears_ws_url  # Debug mode controlled by EARS_DEBUG env var
+MOUTH_URL = config.mouth_url
+TARGET_SAMPLE_RATE = config.sample_rate
 
 # ------------------------------------------------------------------------------
 # Session State Initialization
@@ -216,9 +217,9 @@ def send_text_command(text: str) -> None:
 class AudioProcessor:
     """Processes audio frames and forwards to WebSocket."""
 
-    def __init__(self, websocket_url: str, chunk_duration_ms: int = 100):
+    def __init__(self, websocket_url: str, chunk_duration_ms: int = None):
         self.websocket_url = websocket_url
-        self.chunk_duration_ms = chunk_duration_ms
+        self.chunk_duration_ms = chunk_duration_ms or config.audio.chunk_duration_ms
         self.audio_queue: queue.Queue = queue.Queue()
         self.message_queue: queue.Queue = queue.Queue()  # For messages to main thread
         self.running = False
@@ -469,16 +470,16 @@ with audio_tab:
         audio_frame_callback=frame_callback,
         media_stream_constraints={
             "audio": {
-                "echoCancellation": True,
-                "noiseSuppression": True,
-                "autoGainControl": True,
+                "echoCancellation": config.audio.echo_cancellation,
+                "noiseSuppression": config.audio.noise_suppression,
+                "autoGainControl": config.audio.auto_gain_control,
                 "sampleRate": TARGET_SAMPLE_RATE,
                 "channelCount": 1,
             },
             "video": False,
         },
         rtc_configuration={
-            "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
+            "iceServers": [{"urls": config.webrtc.ice_servers}]
         },
     )
 

@@ -28,7 +28,7 @@ class TestAudioStreamerConfig:
     """Test the AudioStreamerConfig dataclass."""
 
     def test_default_websocket_url(self):
-        """Verify default WebSocket URL is localhost:8766."""
+        """Verify default WebSocket URL is base localhost:8766 without debug."""
         from utils.audio_streamer import AudioStreamerConfig
 
         config = AudioStreamerConfig()
@@ -140,20 +140,14 @@ class TestChatPageConfig:
     """Test chat page configuration values."""
 
     def test_ears_ws_url_constant(self):
-        """Verify EARS WebSocket URL is defined correctly."""
-        # Import the constant directly to avoid full page initialization
-        import importlib.util
-
-        spec = importlib.util.spec_from_file_location(
-            "chat_constants",
-            FACE_DIR / "pages" / "chat.py"
-        )
+        """Verify EARS WebSocket URL uses config (not hardcoded)."""
         # Can't fully import due to Streamlit dependencies, but we can check the file
         chat_file = FACE_DIR / "pages" / "chat.py"
         content = chat_file.read_text()
 
-        assert 'EARS_WS_URL = "ws://localhost:8766"' in content
-        assert "TARGET_SAMPLE_RATE = 16000" in content
+        # Should use config.ears_ws_url, not a hardcoded string
+        assert "EARS_WS_URL = config.ears_ws_url" in content
+        assert "TARGET_SAMPLE_RATE = config.sample_rate" in content
 
     def test_chat_page_imports_audio_processor(self):
         """Verify chat page has audio processor functionality."""

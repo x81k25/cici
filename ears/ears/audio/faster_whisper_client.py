@@ -7,6 +7,7 @@ from loguru import logger
 from faster_whisper import WhisperModel
 
 # local imports
+from ears.config import config
 from ears.normalize import normalize_transcription
 
 # ------------------------------------------------------------------------------
@@ -17,19 +18,25 @@ _model: Optional[WhisperModel] = None
 
 
 def load_model(
-    model_size: str = "small",
-    device: str = "cpu",
-    compute_type: str = "int8"
+    model_size: str = None,
+    device: str = None,
+    compute_type: str = None
 ) -> WhisperModel:
     """
     Load faster-whisper model, caching for reuse.
 
-    :param model_size: Whisper model size (tiny, base, small, medium, large-v3)
-    :param device: device to load model on (cpu or cuda)
-    :param compute_type: quantization type (int8 for CPU, float16 for GPU)
+    :param model_size: Whisper model size (defaults to config)
+    :param device: device to load model on (defaults to config)
+    :param compute_type: quantization type (defaults to config)
     :return: loaded WhisperModel
     """
     global _model
+
+    # Use config defaults
+    model_size = model_size or config.whisper.model_size
+    device = device or config.whisper.device
+    compute_type = compute_type or config.whisper.compute_type
+
     if _model is None:
         logger.info(f"loading faster-whisper model: {model_size} on {device} ({compute_type})")
         _model = WhisperModel(model_size, device=device, compute_type=compute_type)
@@ -39,20 +46,23 @@ def load_model(
 
 def transcribe_audio(
     audio_bytes: bytes,
-    model_size: str = "small",
-    language: str = "en"
+    model_size: str = None,
+    language: str = None
 ) -> Optional[str]:
     """
     Transcribe audio bytes to text using faster-whisper.
 
     :param audio_bytes: raw audio data in bytes (WAV, MP3, WebM, etc.)
-    :param model_size: Whisper model size to use
-    :param language: language code for transcription
+    :param model_size: Whisper model size to use (defaults to config)
+    :param language: language code for transcription (defaults to config)
     :return: transcribed text or None if transcription fails
     """
     if not audio_bytes:
         logger.warning("no audio data provided for transcription")
         return None
+
+    # Use config defaults
+    language = language or config.whisper.language
 
     try:
         model = load_model(model_size)
@@ -69,11 +79,11 @@ def transcribe_audio(
             segments, info = model.transcribe(
                 tmp_file.name,
                 language=language,
-                beam_size=5,
+                beam_size=config.whisper.beam_size,
                 vad_filter=True,
                 vad_parameters=dict(
-                    min_silence_duration_ms=500,  # wait 500ms of silence before cutting
-                    speech_pad_ms=200,  # pad speech with 200ms on each side
+                    min_silence_duration_ms=config.whisper.vad_min_silence_duration_ms,
+                    speech_pad_ms=config.whisper.vad_speech_pad_ms,
                 ),
             )
 
@@ -85,18 +95,8 @@ def transcribe_audio(
             text = " ".join(text_parts).strip()
 
             # filter common Whisper hallucinations
-            hallucination_phrases = [
-                "thank you",
-                "thanks for watching",
-                "subscribe",
-                "see you next time",
-                "bye",
-                "goodbye",
-                "thank you for watching",
-                "thanks for listening",
-            ]
             text_lower = text.lower()
-            for phrase in hallucination_phrases:
+            for phrase in config.hallucination_phrases:
                 if text_lower == phrase or text_lower == phrase + ".":
                     logger.warning(f"filtered hallucination: {text}")
                     return None

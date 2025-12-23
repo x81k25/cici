@@ -8,10 +8,21 @@ services:
     ports:
       - "8765:8765"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Service endpoints (internal Docker network)
+      - MIND_HOST=0.0.0.0
+      - MIND_PORT=8765
+      - MOUTH_HOST=mouth
+      - MOUTH_PORT=8001
+      # External services
       - OLLAMA_HOST=${OLLAMA_HOST:-http://192.168.50.2:31435}
-      - MOUTH_URL=http://mouth:8001
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-phi3}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-20250514}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # General settings
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEFAULT_CWD=${DEFAULT_CWD:-/infra/experiments/cici}
+    volumes:
+      - ./mind/config:/app/config:ro
     depends_on:
       - mouth
     networks:
@@ -27,9 +38,18 @@ services:
     ports:
       - "8766:8766"
     environment:
-      - EARS_MIND_URL=http://mind:8765
+      # Service endpoints (internal Docker network)
+      - EARS_HOST=0.0.0.0
+      - EARS_PORT=8766
+      - MIND_HOST=mind
+      - MIND_PORT=8765
+      # Audio settings
+      - SAMPLE_RATE=${SAMPLE_RATE:-16000}
       - EARS_SILENCE_DURATION_MS=${EARS_SILENCE_DURATION_MS:-1000}
+      # General settings
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./ears/ears/config:/app/ears/config:ro
     depends_on:
       - mind
     networks:
@@ -48,15 +68,23 @@ services:
     build:
       context: ./mouth
       dockerfile: Dockerfile
+      args:
+        - PIPER_VOICE=${PIPER_VOICE:-en_GB-jenny_dioco-medium}
     image: cici-mouth:latest
     container_name: cici-mouth
     ports:
       - "8001:8001"
     environment:
-      - TTS_PIPER_MODEL_PATH=/models/en_GB-jenny_dioco-medium.onnx
-      - TTS_PIPER_CONFIG_PATH=/models/en_GB-jenny_dioco-medium.onnx.json
+      # Service endpoints
+      - MOUTH_HOST=0.0.0.0
+      - MOUTH_PORT=8001
+      # Piper TTS settings
+      - PIPER_VOICE=${PIPER_VOICE:-en_GB-jenny_dioco-medium}
+      - PIPER_SAMPLE_RATE=${PIPER_SAMPLE_RATE:-22050}
+      # General settings
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     volumes:
-      - ./mouth/models:/models:ro
+      - ./mouth/config:/app/config:ro
     networks:
       - cici-network
     restart: unless-stopped
@@ -71,13 +99,24 @@ services:
       - "8501:8501"
     environment:
       # MIND is called server-side, use internal Docker network
-      - CICI_API_HOST=mind
-      - CICI_API_PORT=8765
-      - CICI_API_SECURE=false
-      # EARS/MOUTH are called from browser, use host addresses
-      # Override these with your host IP for non-localhost access
-      - CICI_EARS_WS_URL=${CICI_EARS_WS_URL:-ws://localhost:8766/?debug=true}
+      - MIND_HOST=mind
+      - MIND_PORT=8765
+      # EARS/MOUTH - internal network for server-side calls
+      - EARS_HOST=ears
+      - EARS_PORT=8766
+      - MOUTH_HOST=mouth
+      - MOUTH_PORT=8001
+      # Audio settings
+      - SAMPLE_RATE=${SAMPLE_RATE:-16000}
+      - EARS_DEBUG=${EARS_DEBUG:-true}
+      # Browser-accessible URLs (override for non-localhost access)
+      # These are used by the browser to connect directly to EARS/MOUTH
+      - CICI_EARS_WS_URL=${CICI_EARS_WS_URL:-ws://localhost:8766}
       - CICI_MOUTH_URL=${CICI_MOUTH_URL:-http://localhost:8001}
+      # General settings
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./face/config:/app/config:ro
     depends_on:
       - mind
       - ears

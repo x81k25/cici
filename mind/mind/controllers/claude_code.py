@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Any
 # 3rd-party imports
 from loguru import logger
 
+# local imports
+from mind.config import config
+
 if TYPE_CHECKING:
     from mind.session import Session
-
-# default working directory
-DEFAULT_CWD = Path("/infra/experiments/cici")
 
 
 class ClaudeCodeController:
@@ -23,7 +23,7 @@ class ClaudeCodeController:
 
     def __init__(self):
         """Initialize the Claude Code controller."""
-        self.model = "claude-sonnet-4-20250514"
+        self.model = config.claude_model
         self.display_name = "claude-code"
         self._clients: dict[str, Any] = {}  # session_id -> ClaudeSDKClient
         self._pending_confirmations: dict[str, dict] = {}  # session_id -> confirmation data
@@ -51,8 +51,8 @@ class ClaudeCodeController:
             session.logger.info(f"using session directory: {session.current_directory}")
             return Path(session.current_directory)
 
-        session.logger.info(f"using default cwd: {DEFAULT_CWD}")
-        return DEFAULT_CWD
+        session.logger.info(f"using default cwd: {config.default_cwd}")
+        return config.default_cwd
 
     async def _get_or_create_client(self, session: "Session") -> Any:
         """

@@ -6,12 +6,14 @@ FACE polls GET /audio/next to retrieve completed audio chunks.
 
 import httpx
 
+from config import config
+
 
 class MouthClient:
     """Client for fetching audio from MOUTH TTS service."""
 
-    def __init__(self, base_url: str = "http://localhost:8001"):
-        self.base_url = base_url
+    def __init__(self, base_url: str = None):
+        self.base_url = base_url or config.mouth_url
 
     def get_next_audio(self) -> tuple[bytes | None, dict]:
         """Fetch next audio chunk from TTS service.
@@ -20,7 +22,7 @@ class MouthClient:
             Tuple of (audio_bytes or None, metadata dict)
         """
         try:
-            with httpx.Client(timeout=5.0) as client:
+            with httpx.Client(timeout=config.timeouts.connect) as client:
                 response = client.get(f"{self.base_url}/audio/next")
 
                 metadata = {
@@ -41,7 +43,7 @@ class MouthClient:
     def health_check(self) -> bool:
         """Check if MOUTH TTS service is available."""
         try:
-            with httpx.Client(timeout=2.0) as client:
+            with httpx.Client(timeout=config.timeouts.health_check) as client:
                 response = client.get(f"{self.base_url}/health")
                 return response.status_code == 200
         except Exception:

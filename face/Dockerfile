@@ -13,8 +13,10 @@ ENV PATH="/root/.local/bin:$PATH"
 # Copy project files
 COPY pyproject.toml .
 COPY app.py .
+COPY config.py .
 COPY mind_client.py .
 COPY mouth_client.py .
+COPY config/ ./config/
 COPY pages/ ./pages/
 COPY utils/ ./utils/
 COPY static/ ./static/

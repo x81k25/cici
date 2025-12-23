@@ -9,6 +9,8 @@ from enum import Enum
 
 import httpx
 
+from config import config
+
 
 class ConnectionState(Enum):
     """Connection states."""
@@ -25,7 +27,7 @@ class MindClient:
     and polls for messages. Connection state reflects server availability.
     """
 
-    base_url: str = "http://localhost:8765"
+    base_url: str = None
     mode: str = "ollama"  # interaction mode: ollama, cli, claude_code
     current_directory: str = "/infra/experiments/cici"
     state: ConnectionState = ConnectionState.DISCONNECTED
@@ -33,6 +35,10 @@ class MindClient:
 
     # Response history for UI
     responses: list[dict] = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.base_url is None:
+            self.base_url = config.mind_url
 
     def connect(self) -> bool:
         """Connect to the MIND server.
@@ -43,7 +49,7 @@ class MindClient:
             True if connected successfully, False otherwise.
         """
         try:
-            with httpx.Client(timeout=5.0) as client:
+            with httpx.Client(timeout=config.timeouts.connect) as client:
                 # Health check
                 resp = client.get(f"{self.base_url}/health")
                 if resp.status_code == 200:
@@ -90,7 +96,7 @@ class MindClient:
             if original_voice:
                 payload["original_voice"] = original_voice
 
-            with httpx.Client(timeout=120.0) as client:  # Long timeout for LLM responses
+            with httpx.Client(timeout=config.timeouts.llm_request) as client:  # Long timeout for LLM responses
                 # Send text
                 resp = client.post(f"{self.base_url}/text", json=payload)
                 if resp.status_code != 200:
@@ -133,7 +139,7 @@ class MindClient:
             return None
 
         try:
-            with httpx.Client(timeout=5.0) as client:
+            with httpx.Client(timeout=config.timeouts.connect) as client:
                 resp = client.get(f"{self.base_url}/messages")
                 if resp.status_code == 200:
                     data = resp.json()
@@ -151,7 +157,7 @@ class MindClient:
             True if server is healthy, False otherwise.
         """
         try:
-            with httpx.Client(timeout=2.0) as client:
+            with httpx.Client(timeout=config.timeouts.health_check) as client:
                 resp = client.get(f"{self.base_url}/health")
                 return resp.status_code == 200
         except Exception:

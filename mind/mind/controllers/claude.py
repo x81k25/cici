@@ -1,23 +1,19 @@
 # standard library imports
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 # 3rd-party imports
-from dotenv import load_dotenv
 import httpx
 from loguru import logger
+
+# local imports
+from mind.config import config
 
 if TYPE_CHECKING:
     from mind.session import Session
 
 
-# load environment variables
-load_dotenv()
-
-# Claude API configuration
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
-CLAUDE_MODEL_DISPLAY = "claude-sonnet"  # friendly name for responses
+# Claude API URL (constant, not configurable)
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
 
 
@@ -28,18 +24,18 @@ class ClaudeController:
     Stateless single-question API calls to Claude.
     """
 
-    def __init__(self, model: str = CLAUDE_MODEL, display_name: str = CLAUDE_MODEL_DISPLAY):
+    def __init__(self, model: Optional[str] = None, display_name: Optional[str] = None):
         """
         Initialize the Claude controller.
 
         Args:
-            model: Model name to use for inference.
-            display_name: Friendly model name for responses.
+            model: Model name to use for inference (defaults to config).
+            display_name: Friendly model name for responses (defaults to config).
         """
-        self.model = model
-        self.display_name = display_name
-        self.api_key = ANTHROPIC_API_KEY
-        self.timeout = 60.0
+        self.model = model or config.claude_model
+        self.display_name = display_name or config.claude_display_name
+        self.api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        self.timeout = config.llm_timeout
 
     async def ask(self, question: str, session: "Session") -> dict:
         """
@@ -81,7 +77,7 @@ class ClaudeController:
                     },
                     json={
                         "model": self.model,
-                        "max_tokens": 1024,
+                        "max_tokens": config.llm_max_tokens,
                         "messages": [
                             {"role": "user", "content": question}
                         ]

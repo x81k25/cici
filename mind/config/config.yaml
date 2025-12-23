@@ -1,0 +1,28 @@
+# =============================================================================
+# MIND Configuration
+# =============================================================================
+# Module-specific settings for the MIND logic and routing service.
+# Service endpoints and shared settings are in the root .env file.
+
+# -----------------------------------------------------------------------------
+# LLM Settings
+# -----------------------------------------------------------------------------
+llm:
+  # Request timeout for LLM API calls (seconds)
+  timeout: 60.0
+
+  # Maximum tokens for Claude API responses
+  max_tokens: 1024
+
+  # Display name for Claude responses in UI
+  claude_display_name: "claude-sonnet"
+
+# -----------------------------------------------------------------------------
+# TTS Client Settings
+# -----------------------------------------------------------------------------
+tts:
+  # Enable/disable TTS integration
+  enabled: true
+
+  # Timeout for TTS API calls (seconds)
+  timeout: 5.0

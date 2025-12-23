@@ -1,0 +1,68 @@
+# =============================================================================
+# EARS Configuration
+# =============================================================================
+# Module-specific settings for the EARS transcription service.
+# Service endpoints and shared settings are in the root .env file.
+
+# -----------------------------------------------------------------------------
+# Voice Activity Detection (VAD)
+# -----------------------------------------------------------------------------
+vad:
+  # Probability threshold for speech detection (0.0-1.0)
+  speech_threshold: 0.5
+
+  # Minimum speech duration to process (ms)
+  min_speech_duration_ms: 250
+
+  # Padding around detected speech segments (ms)
+  speech_pad_ms: 100
+
+  # Maximum audio buffer before force-flush (seconds)
+  max_buffer_seconds: 30.0
+
+# -----------------------------------------------------------------------------
+# Whisper Transcription
+# -----------------------------------------------------------------------------
+whisper:
+  # Model size: tiny, base, small, medium, large-v3
+  model_size: "small"
+
+  # Device: cpu or cuda
+  device: "cpu"
+
+  # Quantization: int8 (CPU) or float16 (GPU)
+  compute_type: "int8"
+
+  # Language code for transcription
+  language: "en"
+
+  # Beam size for decoding
+  beam_size: 5
+
+  # VAD parameters for Whisper's internal filtering
+  vad_min_silence_duration_ms: 500
+  vad_speech_pad_ms: 200
+
+# -----------------------------------------------------------------------------
+# WebSocket Server
+# -----------------------------------------------------------------------------
+websocket:
+  # Ping interval for keepalive (seconds)
+  ping_interval: 30
+
+  # Ping timeout before disconnect (seconds)
+  ping_timeout: 120
+
+# -----------------------------------------------------------------------------
+# Hallucination Filter
+# -----------------------------------------------------------------------------
+# Common Whisper hallucinations to filter out
+hallucination_phrases:
+  - "thank you"
+  - "thanks for watching"
+  - "subscribe"
+  - "see you next time"
+  - "bye"
+  - "goodbye"
+  - "thank you for watching"
+  - "thanks for listening"
