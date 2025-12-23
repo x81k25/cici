@@ -1,6 +1,7 @@
 """cici chat interface - Text and voice interaction with MIND API."""
 
 import json
+import os
 import queue
 import select
 import threading
@@ -30,8 +31,8 @@ def check_mind_health(api_url: str) -> bool:
         return False
 
 API_URL = st.session_state.get("api_url", "http://localhost:8765")
-EARS_WS_URL = "ws://localhost:8766/?debug=true"
-MOUTH_URL = "http://localhost:8001"
+EARS_WS_URL = os.getenv("CICI_EARS_WS_URL", "ws://localhost:8766/?debug=true")
+MOUTH_URL = os.getenv("CICI_MOUTH_URL", "http://localhost:8001")
 TARGET_SAMPLE_RATE = 16000
 
 # ------------------------------------------------------------------------------

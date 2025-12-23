@@ -1,0 +1,102 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cici
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push all images
+        run: |
+          set -e
+
+          # Determine tags based on event type
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            TAG="pr-${{ github.event.number }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            TAG="latest"
+          else
+            TAG="${GITHUB_REF#refs/heads/}"
+          fi
+
+          echo "Building with tag: ${TAG}"
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+
+          # Services to build (context:name)
+          services=(
+            "mouth:mouth"
+            "mind:mind"
+            "face:face"
+            "ears:ears"
+          )
+
+          for service_info in "${services[@]}"; do
+            IFS=':' read -r context name <<< "$service_info"
+
+            echo "=========================================="
+            echo "Building ${name}..."
+            echo "=========================================="
+
+            # Generate tags
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              TAGS="${{ env.IMAGE_PREFIX }}-${name}:${TAG}"
+            elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+              TAGS="${{ env.IMAGE_PREFIX }}-${name}:latest,${{ env.IMAGE_PREFIX }}-${name}:main,${{ env.IMAGE_PREFIX }}-${name}:sha-${{ github.sha }}"
+            else
+              TAGS="${{ env.IMAGE_PREFIX }}-${name}:${TAG},${{ env.IMAGE_PREFIX }}-${name}:sha-${{ github.sha }}"
+            fi
+
+            # Build and push
+            docker buildx build \
+              --file ./${context}/Dockerfile \
+              --tag ${TAGS//,/ --tag } \
+              --push \
+              --cache-from type=gha,scope=${name} \
+              --cache-to type=gha,mode=max,scope=${name} \
+              ./${context}
+
+            echo "${name} pushed successfully"
+          done
+
+      - name: Report build summary
+        if: always()
+        run: |
+          echo "## CICI Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Event:** \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** \`${{ env.TAG }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Images pushed:" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Image |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| MOUTH | \`${{ env.IMAGE_PREFIX }}-mouth:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| MIND | \`${{ env.IMAGE_PREFIX }}-mind:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| FACE | \`${{ env.IMAGE_PREFIX }}-face:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| EARS | \`${{ env.IMAGE_PREFIX }}-ears:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build time:** $((SECONDS / 60))m $((SECONDS % 60))s" >> $GITHUB_STEP_SUMMARY

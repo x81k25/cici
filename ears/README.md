@@ -30,6 +30,8 @@ pkill -f "ears.main"
 
 # Kill background process (by port)
 lsof -ti :8766 | xargs kill
+# or
+fuser -k 8766/tcp
 ```
 
 ## WebSocket Protocol

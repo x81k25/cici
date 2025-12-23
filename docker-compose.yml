@@ -1,0 +1,91 @@
+services:
+  mind:
+    build:
+      context: ./mind
+      dockerfile: Dockerfile
+    image: cici-mind:latest
+    container_name: cici-mind
+    ports:
+      - "8765:8765"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://192.168.50.2:31435}
+      - MOUTH_URL=http://mouth:8001
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - mouth
+    networks:
+      - cici-network
+    restart: unless-stopped
+
+  ears:
+    build:
+      context: ./ears
+      dockerfile: Dockerfile
+    image: cici-ears:latest
+    container_name: cici-ears
+    ports:
+      - "8766:8766"
+    environment:
+      - EARS_MIND_URL=http://mind:8765
+      - EARS_SILENCE_DURATION_MS=${EARS_SILENCE_DURATION_MS:-1000}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - mind
+    networks:
+      - cici-network
+    restart: unless-stopped
+    # Uncomment for GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  mouth:
+    build:
+      context: ./mouth
+      dockerfile: Dockerfile
+    image: cici-mouth:latest
+    container_name: cici-mouth
+    ports:
+      - "8001:8001"
+    environment:
+      - TTS_PIPER_MODEL_PATH=/models/en_GB-jenny_dioco-medium.onnx
+      - TTS_PIPER_CONFIG_PATH=/models/en_GB-jenny_dioco-medium.onnx.json
+    volumes:
+      - ./mouth/models:/models:ro
+    networks:
+      - cici-network
+    restart: unless-stopped
+
+  face:
+    build:
+      context: ./face
+      dockerfile: Dockerfile
+    image: cici-face:latest
+    container_name: cici-face
+    ports:
+      - "8501:8501"
+    environment:
+      # MIND is called server-side, use internal Docker network
+      - CICI_API_HOST=mind
+      - CICI_API_PORT=8765
+      - CICI_API_SECURE=false
+      # EARS/MOUTH are called from browser, use host addresses
+      # Override these with your host IP for non-localhost access
+      - CICI_EARS_WS_URL=${CICI_EARS_WS_URL:-ws://localhost:8766/?debug=true}
+      - CICI_MOUTH_URL=${CICI_MOUTH_URL:-http://localhost:8001}
+    depends_on:
+      - mind
+      - ears
+      - mouth
+    networks:
+      - cici-network
+    restart: unless-stopped
+
+networks:
+  cici-network:
+    driver: bridge
