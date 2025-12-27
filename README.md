@@ -105,27 +105,167 @@ Open http://localhost:8501 in your browser.
 
 ## Inter-Service Communication
 
-### FACE → MIND
+### Data Flow Overview
 
-FACE communicates with MIND via REST API:
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                              USER                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+                    │ text input              │ voice input
+                    ▼                         ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                              FACE                                         │
+│                        (Streamlit Frontend)                               │
+│  • Sends text to MIND        • Streams audio to EARS                     │
+│  • Polls MOUTH for audio     • Receives transcriptions from EARS         │
+│  • Plays audio to user       • Displays responses                        │
+└──────────────────────────────────────────────────────────────────────────┘
+         │                           │                        ▲
+         │ HTTP REST                 │ WebSocket              │ HTTP REST
+         ▼                           ▼                        │ (polling)
+┌─────────────────────┐   ┌─────────────────────┐   ┌─────────────────────┐
+│        MIND         │   │        EARS         │   │       MOUTH         │
+│  (Logic & Routing)  │   │   (Transcription)   │   │   (Text-to-Speech)  │
+│                     │   │                     │   │                     │
+│  POST /process ─────┼───┼─────────────────────┼──►│  POST /synthesize   │
+│                     │   │                     │   │                     │
+└─────────────────────┘   └─────────────────────┘   └─────────────────────┘
+```
 
+### FACE → MIND (HTTP REST)
+
+Session and text processing via REST API.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/sessions` | POST | Create new session |
+| `/sessions` | GET | List all sessions |
+| `/sessions/{id}` | GET | Get session details |
+| `/sessions/{id}` | DELETE | Kill session |
+| `/sessions/{id}/process` | POST | Process text input |
+| `/sessions/{id}/cancel` | POST | Cancel running tasks |
+| `/health` | GET | Health check |
+
+**Create Session:**
 ```bash
-# Create session
-POST /sessions → {session_id, mode, ...}
+POST /sessions
+Content-Type: application/json
 
-# Process text
-POST /sessions/{id}/process → {input, llm_response, cli_result, ...}
+{"mode": "ollama"}  # optional, defaults to ollama
 
-# List sessions
-GET /sessions → [{session_id, mode, idle_seconds}, ...]
+Response: {"session_id": "abc123", "mode": "ollama", "created_at": "..."}
 ```
 
-### FACE → EARS (future)
+**Process Text:**
+```bash
+POST /sessions/{id}/process
+Content-Type: application/json
 
-When voice input is added, FACE will stream audio to EARS:
+{"text": "what time is it"}
+
+Response: {
+  "input": "what time is it",
+  "llm_response": "The current time is...",
+  "cli_result": null,
+  "mode": "ollama"
+}
+```
+
+### FACE → EARS (WebSocket)
+
+Real-time audio streaming for voice input.
+
+**Connection:**
+```
+ws://localhost:8766/           # Standard mode
+ws://localhost:8766/?debug=true  # Debug mode (includes audio analysis)
+```
+
+**Protocol:**
+```
+FACE ──[binary PCM audio]──► EARS
+     16kHz, mono, int16
+
+EARS ──[JSON messages]──► FACE
+     {"type": "transcription", "text": "hello world", "final": true}
+     {"type": "debug", "chunk_index": 1, "defects": [...], "metrics": {...}}
+```
+
+**Audio Format Requirements:**
+- Sample rate: 16000 Hz
+- Channels: 1 (mono)
+- Format: int16 (signed 16-bit)
+- Endianness: little-endian
+
+**Debug Mode Defects:** `silence`, `low_volume`, `clipping`, `dc_offset`, `wrong_byte_order`, `wrong_sample_rate`, `truncated`, `noise_only`
+
+### MIND → MOUTH (HTTP REST)
+
+Text-to-speech synthesis requests from MIND.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/synthesize` | POST | Queue text for TTS |
+| `/audio/next` | GET | Get next completed audio chunk |
+| `/status` | GET | Queue status |
+| `/health` | GET | Health check |
+
+**Queue Text:**
+```bash
+POST /synthesize
+Content-Type: application/json
+
+{"text": "Hello, how can I help you?", "request_id": "req-123"}
+
+Response: {"status": "queued", "request_id": "req-123"}
+```
+
+### FACE ← MOUTH (HTTP REST Polling)
+
+FACE polls MOUTH for completed audio chunks.
+
+**Get Audio:**
+```bash
+GET /audio/next
+
+Response (audio ready):
+  Status: 200
+  Content-Type: audio/wav
+  X-Pending-Count: 2
+  X-Completed-Count: 1
+  X-Request-Id: req-123
+  Body: [WAV audio data]
+
+Response (queue empty):
+  Status: 204 No Content
+```
+
+### Complete Voice Interaction Flow
 
 ```
-FACE ──WebSocket──▶ EARS ──transcription──▶ FACE ──text──▶ MIND
+1. User speaks into microphone
+   └─► FACE captures audio
+
+2. FACE streams audio to EARS
+   └─► WebSocket: binary PCM chunks
+
+3. EARS transcribes and returns text
+   └─► {"type": "transcription", "text": "turn on the lights", "final": true}
+
+4. FACE sends transcription to MIND
+   └─► POST /sessions/{id}/process {"text": "turn on the lights"}
+
+5. MIND processes and responds
+   └─► {"llm_response": "I'll turn on the lights for you", ...}
+
+6. MIND queues TTS with MOUTH
+   └─► POST /synthesize {"text": "I'll turn on the lights for you"}
+
+7. FACE polls MOUTH for audio
+   └─► GET /audio/next → 200 + WAV data
+
+8. FACE plays audio to user
+   └─► Browser audio playback
 ```
 
 ## Interaction Modes
@@ -151,14 +291,14 @@ Pre-built Docker images are available from GitHub Container Registry (GHCR).
 
 ### Container Registry
 
-All images are published to: `ghcr.io/x81k25/cici-<service>`
+All images are published to: `ghcr.io/x81k25/cici/<service>`
 
 | Service | Image URL |
 |---------|-----------|
-| **MIND** | `ghcr.io/x81k25/cici-mind` |
-| **EARS** | `ghcr.io/x81k25/cici-ears` |
-| **MOUTH** | `ghcr.io/x81k25/cici-mouth` |
-| **FACE** | `ghcr.io/x81k25/cici-face` |
+| **MIND** | `ghcr.io/x81k25/cici/mind` |
+| **EARS** | `ghcr.io/x81k25/cici/ears` |
+| **MOUTH** | `ghcr.io/x81k25/cici/mouth` |
+| **FACE** | `ghcr.io/x81k25/cici/face` |
 
 ### Image Tags
 
@@ -178,16 +318,16 @@ Images are tagged based on the git branch and event:
 
 ```bash
 # Pull dev versions
-docker pull ghcr.io/x81k25/cici-mind:dev
-docker pull ghcr.io/x81k25/cici-ears:dev
-docker pull ghcr.io/x81k25/cici-mouth:dev
-docker pull ghcr.io/x81k25/cici-face:dev
+docker pull ghcr.io/x81k25/cici/mind:dev
+docker pull ghcr.io/x81k25/cici/ears:dev
+docker pull ghcr.io/x81k25/cici/mouth:dev
+docker pull ghcr.io/x81k25/cici/face:dev
 
 # Pull stable versions
-docker pull ghcr.io/x81k25/cici-mind:latest
-docker pull ghcr.io/x81k25/cici-ears:latest
-docker pull ghcr.io/x81k25/cici-mouth:latest
-docker pull ghcr.io/x81k25/cici-face:latest
+docker pull ghcr.io/x81k25/cici/mind:latest
+docker pull ghcr.io/x81k25/cici/ears:latest
+docker pull ghcr.io/x81k25/cici/mouth:latest
+docker pull ghcr.io/x81k25/cici/face:latest
 ```
 
 ### Running with Docker Compose

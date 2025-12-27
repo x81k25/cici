@@ -4,6 +4,9 @@ from unittest.mock import MagicMock, patch
 # 3rd-party imports
 import pytest
 
+# local imports
+from mind.config import config
+
 
 # ------------------------------------------------------------------------------
 # CLIController tests
@@ -265,8 +268,8 @@ class TestOllamaController:
 
     def test_initialization(self, ollama_controller):
         """Test Ollama controller initialization."""
-        assert ollama_controller.host == "http://192.168.50.2:31435"
-        assert ollama_controller.model == "phi3"
+        assert ollama_controller.host == config.ollama_host
+        assert ollama_controller.model == config.ollama_model
         assert ollama_controller.timeout == 60.0
 
     def test_initialization_custom(self):

@@ -44,7 +44,7 @@ class EnvSettings(BaseSettings):
 
     # External services
     ollama_host: str = "http://192.168.50.2:31435"
-    ollama_model: str = "phi3"
+    ollama_model: str = "hermes3"
     claude_model: str = "claude-sonnet-4-20250514"
 
     # General settings

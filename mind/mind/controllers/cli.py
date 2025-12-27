@@ -8,16 +8,12 @@ import httpx
 from loguru import logger
 
 # local imports
+from mind.config import config
 from mind.core.commands import execute_command as sync_execute_command
 from mind.core.prompts import get_prompt
 
 if TYPE_CHECKING:
     from mind.session import Session
-
-
-# Ollama configuration (same as llm.py)
-OLLAMA_HOST = "http://192.168.50.2:31435"
-OLLAMA_MODEL = "phi3"
 
 
 # dangerous patterns that should be blocked
@@ -176,9 +172,9 @@ class CLIController:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
-                    f"{OLLAMA_HOST}/api/generate",
+                    f"{config.ollama_host}/api/generate",
                     json={
-                        "model": OLLAMA_MODEL,
+                        "model": config.ollama_model,
                         "prompt": prompt,
                         "stream": False
                     }
@@ -246,9 +242,9 @@ class CLIController:
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
-                    f"{OLLAMA_HOST}/api/generate",
+                    f"{config.ollama_host}/api/generate",
                     json={
-                        "model": OLLAMA_MODEL,
+                        "model": config.ollama_model,
                         "prompt": prompt,
                         "stream": False
                     }
@@ -318,9 +314,9 @@ class CLIController:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{OLLAMA_HOST}/api/generate",
+                    f"{config.ollama_host}/api/generate",
                     json={
-                        "model": OLLAMA_MODEL,
+                        "model": config.ollama_model,
                         "prompt": prompt,
                         "stream": False
                     }

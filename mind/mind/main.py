@@ -23,6 +23,7 @@ from fastapi import FastAPI, HTTPException
 from loguru import logger
 
 # local imports
+from mind.config import config
 from mind.session import Session
 from mind.transcript_buffer import TranscriptBuffer
 from mind.message_buffer import MessageBuffer
@@ -184,7 +185,7 @@ async def process_command(text: str, original_voice: str | None = None) -> None:
             await message_buffer.add({
                 "type": "llm_response",
                 "content": response_text,
-                "model": "phi3",
+                "model": config.ollama_model,
                 "success": result.get("success", False),
                 "error": result.get("error"),
             })

@@ -3,7 +3,7 @@ services:
     build:
       context: ./mind
       dockerfile: Dockerfile
-    image: cici-mind:latest
+    image: ghcr.io/x81k25/cici/mind:dev
     container_name: cici-mind
     ports:
       - "8765:8765"
@@ -15,7 +15,7 @@ services:
       - MOUTH_PORT=8001
       # External services
       - OLLAMA_HOST=${OLLAMA_HOST:-http://192.168.50.2:31435}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-phi3}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-hermes3}
       - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-20250514}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       # General settings
@@ -33,7 +33,7 @@ services:
     build:
       context: ./ears
       dockerfile: Dockerfile
-    image: cici-ears:latest
+    image: ghcr.io/x81k25/cici/ears:dev
     container_name: cici-ears
     ports:
       - "8766:8766"
@@ -70,7 +70,7 @@ services:
       dockerfile: Dockerfile
       args:
         - PIPER_VOICE=${PIPER_VOICE:-en_GB-jenny_dioco-medium}
-    image: cici-mouth:latest
+    image: ghcr.io/x81k25/cici/mouth:dev
     container_name: cici-mouth
     ports:
       - "8001:8001"
@@ -93,7 +93,7 @@ services:
     build:
       context: ./face
       dockerfile: Dockerfile
-    image: cici-face:latest
+    image: ghcr.io/x81k25/cici/face:dev
     container_name: cici-face
     ports:
       - "8501:8501"

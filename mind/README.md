@@ -111,7 +111,7 @@ MIND uses a two-tier configuration system:
 | `MOUTH_HOST` | `localhost` | MOUTH TTS service host |
 | `MOUTH_PORT` | `8001` | MOUTH TTS service port |
 | `OLLAMA_HOST` | `http://192.168.50.2:31435` | Ollama LLM server URL |
-| `OLLAMA_MODEL` | `phi3` | Ollama model name |
+| `OLLAMA_MODEL` | `hermes3` | Ollama model name |
 | `CLAUDE_MODEL` | `claude-sonnet-4-20250514` | Claude model for API calls |
 | `LOG_LEVEL` | `INFO` | Logging level |
 | `DEFAULT_CWD` | `/infra/experiments/cici` | Default working directory |

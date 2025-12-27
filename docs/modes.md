@@ -15,7 +15,7 @@ stateDiagram-v2
     Any --> Ollama : "exit cli"
 ```
 
-Conversational mode. Input routes to local Ollama (phi3) for chat responses.
+Conversational mode. Input routes to local Ollama (hermes3) for chat responses.
 - Maintains conversation context (50 message limit)
 - Context preserved when switching modes
 

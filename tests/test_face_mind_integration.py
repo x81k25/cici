@@ -19,8 +19,10 @@ from streamlit.testing.v1 import AppTest
 # Path setup
 CICI_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(CICI_ROOT / "face"))
+sys.path.insert(0, str(CICI_ROOT / "mind"))
 
 from mind_client import MindClient, ConnectionState
+from mind.config import config
 
 
 # ------------------------------------------------------------------------------
@@ -322,7 +324,7 @@ class TestOllamaMode:
         msg = test_client.get_first_message(response)
         assert msg is not None
         assert msg.get("type") == "llm_response"
-        assert msg.get("model") == "phi3"
+        assert msg.get("model") == config.ollama_model
         # Should have content (success) or error
         assert msg.get("content") or msg.get("error")
 

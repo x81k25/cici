@@ -10,7 +10,7 @@ Test scenarios for validating Cici's mode behavior and transitions.
 
 **Message types in responses:**
 - `system` - Mode changes, cancellations
-- `llm_response` - From Ollama (phi3) or Claude Code (claude-code)
+- `llm_response` - From Ollama (hermes3) or Claude Code (claude-code)
 - `cli_result` - Command execution results
 - `error` - Error messages
 
@@ -32,7 +32,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic conversational response>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
@@ -51,7 +51,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic response mentioning southern hemisphere>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
@@ -74,7 +74,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic acknowledgment>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
@@ -93,7 +93,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic response referencing blue/favorite color>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
@@ -507,7 +507,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic response about Python>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
@@ -585,7 +585,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic response about Python history>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
@@ -742,7 +742,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic acknowledgment>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
@@ -806,7 +806,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic response mentioning 42>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
@@ -870,7 +870,7 @@ Response:
     {
       "type": "llm_response",
       "content": "<non-deterministic conversational response, NOT a mode switch>",
-      "model": "phi3",
+      "model": "hermes3",
       "success": true
     }
   ],
