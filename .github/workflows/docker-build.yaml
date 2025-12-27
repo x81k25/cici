@@ -5,6 +5,16 @@ on:
     branches: [dev, main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Branch to build from'
+        required: true
+        default: 'main'
+        type: choice
+        options:
+          - main
+          - dev
 
 env:
   REGISTRY: ghcr.io
