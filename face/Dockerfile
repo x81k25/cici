@@ -14,6 +14,7 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY pyproject.toml .
 COPY app.py .
 COPY config.py .
+COPY metrics.py .
 COPY mind_client.py .
 COPY mouth_client.py .
 COPY config/ ./config/
