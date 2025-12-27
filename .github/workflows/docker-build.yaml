@@ -2,13 +2,13 @@ name: Docker Build
 
 on:
   push:
-    branches: [dev]
+    branches: [dev, main]
   pull_request:
     branches: [main]
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/cici
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
 
 jobs:
   docker-build:
@@ -64,11 +64,11 @@ jobs:
 
             # Generate tags
             if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              TAGS="${{ env.IMAGE_PREFIX }}-${name}:${TAG}"
+              TAGS="${{ env.IMAGE_PREFIX }}/${name}:${TAG}"
             elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-              TAGS="${{ env.IMAGE_PREFIX }}-${name}:latest,${{ env.IMAGE_PREFIX }}-${name}:main,${{ env.IMAGE_PREFIX }}-${name}:sha-${{ github.sha }}"
+              TAGS="${{ env.IMAGE_PREFIX }}/${name}:latest,${{ env.IMAGE_PREFIX }}/${name}:main,${{ env.IMAGE_PREFIX }}/${name}:sha-${{ github.sha }}"
             else
-              TAGS="${{ env.IMAGE_PREFIX }}-${name}:${TAG},${{ env.IMAGE_PREFIX }}-${name}:sha-${{ github.sha }}"
+              TAGS="${{ env.IMAGE_PREFIX }}/${name}:${TAG},${{ env.IMAGE_PREFIX }}/${name}:sha-${{ github.sha }}"
             fi
 
             # Build and push
@@ -94,9 +94,9 @@ jobs:
           echo "### Images pushed:" >> $GITHUB_STEP_SUMMARY
           echo "| Service | Image |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| MOUTH | \`${{ env.IMAGE_PREFIX }}-mouth:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| MIND | \`${{ env.IMAGE_PREFIX }}-mind:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| FACE | \`${{ env.IMAGE_PREFIX }}-face:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| EARS | \`${{ env.IMAGE_PREFIX }}-ears:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| MOUTH | \`${{ env.IMAGE_PREFIX }}/mouth:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| MIND | \`${{ env.IMAGE_PREFIX }}/mind:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| FACE | \`${{ env.IMAGE_PREFIX }}/face:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| EARS | \`${{ env.IMAGE_PREFIX }}/ears:${{ env.TAG }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Build time:** $((SECONDS / 60))m $((SECONDS % 60))s" >> $GITHUB_STEP_SUMMARY
