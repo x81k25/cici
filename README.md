@@ -4,27 +4,97 @@ A microservices-based personal assistant with voice transcription, command routi
 
 ## Architecture
 
+```mermaid
+flowchart TB
+    subgraph External["External Services"]
+        Ollama["Ollama<br/>LLM Inference<br/>192.168.50.2:31435"]
+        Anthropic["Anthropic API<br/>Claude Queries"]
+    end
+
+    subgraph User["User Interface"]
+        Browser["Browser"]
+    end
+
+    subgraph Services["CICI Microservices"]
+        subgraph FACE["FACE :8501"]
+            direction TB
+            F1["Streamlit Frontend"]
+            F2["• Text/Voice Input"]
+            F3["• Audio Playback"]
+            F4["• Session UI"]
+        end
+
+        subgraph MIND["MIND :8765"]
+            direction TB
+            M1["Logic & Routing API"]
+            M2["• Session Management"]
+            M3["• Command Routing"]
+            M4["• Mode Switching"]
+        end
+
+        subgraph EARS["EARS :8766"]
+            direction TB
+            E1["Transcription Service"]
+            E2["• Audio Streaming"]
+            E3["• VAD Detection"]
+            E4["• Whisper STT"]
+        end
+
+        subgraph MOUTH["MOUTH :8001"]
+            direction TB
+            T1["Text-to-Speech"]
+            T2["• Piper TTS"]
+            T3["• Audio Queue"]
+            T4["• WAV Output"]
+        end
+    end
+
+    Browser <-->|HTTP| FACE
+
+    FACE -->|"HTTP REST<br/>POST /sessions/{id}/process"| MIND
+    FACE <-->|"WebSocket<br/>Binary PCM Audio"| EARS
+    FACE -.->|"HTTP Polling<br/>GET /audio/next"| MOUTH
+
+    MIND -->|"HTTP REST<br/>POST /synthesize"| MOUTH
+    MIND -->|HTTP| Ollama
+    MIND -->|HTTP| Anthropic
+
+    EARS -.->|"Future: Direct<br/>Transcription"| MIND
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                           FACE                                  │
-│                    (Streamlit Frontend)                         │
-│                     http://localhost:8501                       │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┴───────────────┐
-              │ HTTP REST                     │ WebSocket
-              ▼                               ▼
-┌─────────────────────────────┐   ┌─────────────────────────────┐
-│           MIND              │   │           EARS              │
-│   (Logic & Routing API)     │   │   (Transcription Service)   │
-│   http://localhost:8765     │   │   ws://localhost:8766       │
-├─────────────────────────────┤   ├─────────────────────────────┤
-│ • Session management        │   │ • Audio streaming           │
-│ • Voice-to-CLI translation  │   │ • Voice Activity Detection  │
-│ • Command routing           │   │ • Whisper transcription     │
-│ • Mode switching            │   │ • Raw text output           │
-│ • Ollama/Claude/CLI exec    │   │                             │
-└─────────────────────────────┘   └─────────────────────────────┘
+
+### Data Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as FACE
+    participant E as EARS
+    participant M as MIND
+    participant T as MOUTH
+    participant O as Ollama/Claude
+
+    rect rgb(40, 40, 60)
+        Note over U,F: Voice Input Flow
+        U->>F: Speak into microphone
+        F->>E: Stream PCM audio (WebSocket)
+        E->>F: {"type": "transcription", "text": "...", "final": true}
+    end
+
+    rect rgb(40, 60, 40)
+        Note over F,O: Processing Flow
+        F->>M: POST /sessions/{id}/process
+        M->>O: LLM Query
+        O->>M: Response
+        M->>T: POST /synthesize
+        M->>F: {"llm_response": "..."}
+    end
+
+    rect rgb(60, 40, 40)
+        Note over F,T: Audio Output Flow
+        F->>T: GET /audio/next (polling)
+        T->>F: WAV audio data
+        F->>U: Play audio
+    end
 ```
 
 ## Components
@@ -107,29 +177,29 @@ Open http://localhost:8501 in your browser.
 
 ### Data Flow Overview
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                              USER                                         │
-└──────────────────────────────────────────────────────────────────────────┘
-                    │ text input              │ voice input
-                    ▼                         ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                              FACE                                         │
-│                        (Streamlit Frontend)                               │
-│  • Sends text to MIND        • Streams audio to EARS                     │
-│  • Polls MOUTH for audio     • Receives transcriptions from EARS         │
-│  • Plays audio to user       • Displays responses                        │
-└──────────────────────────────────────────────────────────────────────────┘
-         │                           │                        ▲
-         │ HTTP REST                 │ WebSocket              │ HTTP REST
-         ▼                           ▼                        │ (polling)
-┌─────────────────────┐   ┌─────────────────────┐   ┌─────────────────────┐
-│        MIND         │   │        EARS         │   │       MOUTH         │
-│  (Logic & Routing)  │   │   (Transcription)   │   │   (Text-to-Speech)  │
-│                     │   │                     │   │                     │
-│  POST /process ─────┼───┼─────────────────────┼──►│  POST /synthesize   │
-│                     │   │                     │   │                     │
-└─────────────────────┘   └─────────────────────┘   └─────────────────────┘
+```mermaid
+flowchart TB
+    User["USER"]
+
+    User -->|text input| FACE
+    User -->|voice input| FACE
+
+    subgraph FACE["FACE (Streamlit Frontend)"]
+        FA["• Sends text to MIND<br/>• Polls MOUTH for audio<br/>• Plays audio to user"]
+        FB["• Streams audio to EARS<br/>• Receives transcriptions<br/>• Displays responses"]
+    end
+
+    FACE -->|"HTTP REST"| MIND
+    FACE <-->|"WebSocket"| EARS
+    FACE -.->|"HTTP REST<br/>(polling)"| MOUTH
+
+    subgraph Backend["Backend Services"]
+        MIND["MIND<br/>(Logic & Routing)"]
+        EARS["EARS<br/>(Transcription)"]
+        MOUTH["MOUTH<br/>(Text-to-Speech)"]
+    end
+
+    MIND -->|"POST /synthesize"| MOUTH
 ```
 
 ### FACE → MIND (HTTP REST)
@@ -242,30 +312,31 @@ Response (queue empty):
 
 ### Complete Voice Interaction Flow
 
-```
-1. User speaks into microphone
-   └─► FACE captures audio
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant F as FACE
+    participant E as EARS
+    participant M as MIND
+    participant T as MOUTH
 
-2. FACE streams audio to EARS
-   └─► WebSocket: binary PCM chunks
+    U->>F: Speaks into microphone
+    Note right of F: Captures audio
 
-3. EARS transcribes and returns text
-   └─► {"type": "transcription", "text": "turn on the lights", "final": true}
+    F->>E: Stream binary PCM chunks (WebSocket)
+    E->>F: {"type": "transcription",<br/>"text": "turn on the lights",<br/>"final": true}
 
-4. FACE sends transcription to MIND
-   └─► POST /sessions/{id}/process {"text": "turn on the lights"}
+    F->>M: POST /sessions/{id}/process<br/>{"text": "turn on the lights"}
+    M->>M: Process command
+    M->>F: {"llm_response": "I'll turn on<br/>the lights for you", ...}
 
-5. MIND processes and responds
-   └─► {"llm_response": "I'll turn on the lights for you", ...}
+    M->>T: POST /synthesize<br/>{"text": "I'll turn on the lights..."}
 
-6. MIND queues TTS with MOUTH
-   └─► POST /synthesize {"text": "I'll turn on the lights for you"}
+    F->>T: GET /audio/next (polling)
+    T->>F: 200 + WAV data
 
-7. FACE polls MOUTH for audio
-   └─► GET /audio/next → 200 + WAV data
-
-8. FACE plays audio to user
-   └─► Browser audio playback
+    F->>U: Browser audio playback
 ```
 
 ## Interaction Modes
