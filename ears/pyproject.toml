@@ -5,10 +5,12 @@ description = "WebSocket transcription service - audio in, text out"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "aiohttp>=3.9.0",
     "faster-whisper>=1.2.1",
     "httpx>=0.28.1",
     "loguru>=0.7.0",
     "numpy>=2.3.5",
+    "prometheus-client>=0.21.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.0.0",
     "pydub>=0.25.1",

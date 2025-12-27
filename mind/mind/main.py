@@ -15,15 +15,17 @@ Endpoints:
 """
 
 # standard library imports
+import time
 import uuid
 from contextlib import asynccontextmanager
 
 # 3rd-party imports
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from loguru import logger
 
 # local imports
 from mind.config import config
+from mind import metrics
 from mind.session import Session
 from mind.transcript_buffer import TranscriptBuffer
 from mind.message_buffer import MessageBuffer
@@ -97,6 +99,39 @@ app = FastAPI(
 
 
 # ------------------------------------------------------------------------------
+# Metrics middleware
+# ------------------------------------------------------------------------------
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Track request metrics."""
+    # Skip metrics endpoint to avoid recursion
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    duration = time.perf_counter() - start_time
+
+    endpoint = request.url.path
+    status = "success" if response.status_code < 400 else "error"
+
+    metrics.REQUEST_COUNT.labels(endpoint=endpoint, status=status).inc()
+    metrics.REQUEST_LATENCY.labels(endpoint=endpoint).observe(duration)
+
+    return response
+
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus metrics endpoint."""
+    return Response(
+        content=metrics.get_metrics(),
+        media_type=metrics.get_content_type()
+    )
+
+
+# ------------------------------------------------------------------------------
 # Helper functions
 # ------------------------------------------------------------------------------
 
@@ -139,6 +174,9 @@ async def process_command(text: str, original_voice: str | None = None) -> None:
         original_voice: Original voice transcription (for LLM fallback).
     """
     global session, input_processor, command_router, message_buffer
+
+    start_time = time.perf_counter()
+    route_type = "unknown"
 
     try:
         # process the input
@@ -248,6 +286,11 @@ async def process_command(text: str, original_voice: str | None = None) -> None:
                 "error": route_result.get("message"),
             })
 
+        # Track successful command processing
+        duration = time.perf_counter() - start_time
+        metrics.COMMANDS_PROCESSED.labels(route_type=route_type).inc()
+        metrics.COMMAND_LATENCY.labels(route_type=route_type).observe(duration)
+
     except Exception as e:
         logger.exception(f"error processing command: {e}")
         await message_buffer.add({
@@ -255,6 +298,10 @@ async def process_command(text: str, original_voice: str | None = None) -> None:
             "content": f"Processing error: {str(e)}",
             "error": str(e),
         })
+        # Track failed command
+        duration = time.perf_counter() - start_time
+        metrics.COMMANDS_PROCESSED.labels(route_type="error").inc()
+        metrics.COMMAND_LATENCY.labels(route_type="error").observe(duration)
 
 
 # ------------------------------------------------------------------------------

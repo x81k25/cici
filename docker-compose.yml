@@ -37,6 +37,7 @@ services:
     container_name: cici-ears
     ports:
       - "8766:8766"
+      - "9766:9766"  # Prometheus metrics
     environment:
       # Service endpoints (internal Docker network)
       - EARS_HOST=0.0.0.0
@@ -97,6 +98,7 @@ services:
     container_name: cici-face
     ports:
       - "8501:8501"
+      - "9501:9501"  # Prometheus metrics
     environment:
       # MIND is called server-side, use internal Docker network
       - MIND_HOST=mind

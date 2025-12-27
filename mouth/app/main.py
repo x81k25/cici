@@ -1,15 +1,17 @@
 """FastAPI application for TTS service."""
 
 import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
 
 from app.config import settings
 from app.models import SynthesizeRequest, SynthesizeResponse, QueueItem, QueueStatus
 from app.queue_manager import queue_manager
 from app.synthesizer import synthesizer
+from app import metrics
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +40,42 @@ app = FastAPI(
 )
 
 
+# ------------------------------------------------------------------------------
+# Metrics middleware
+# ------------------------------------------------------------------------------
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    """Track request metrics."""
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    duration = time.perf_counter() - start_time
+
+    endpoint = request.url.path
+    status = "success" if response.status_code < 400 else "error"
+
+    metrics.REQUEST_COUNT.labels(endpoint=endpoint, status=status).inc()
+    metrics.REQUEST_LATENCY.labels(endpoint=endpoint).observe(duration)
+
+    # Update queue gauges on each request
+    metrics.PENDING_QUEUE_SIZE.set(queue_manager.pending_count())
+    metrics.COMPLETED_QUEUE_SIZE.set(queue_manager.completed_count())
+
+    return response
+
+
+@app.get("/metrics")
+async def prometheus_metrics():
+    """Prometheus metrics endpoint."""
+    return Response(
+        content=metrics.get_metrics(),
+        media_type=metrics.get_content_type()
+    )
+
+
 @app.post(
     "/synthesize",
     response_model=SynthesizeResponse,
@@ -54,8 +92,11 @@ async def synthesize(request: SynthesizeRequest) -> SynthesizeResponse:
     item = QueueItem(text=text, request_id=request.request_id)
     position, dropped = queue_manager.push_pending(item)
 
+    metrics.SYNTHESIS_REQUESTS.labels(status="queued").inc()
+
     if dropped:
         logger.warning(f"Queue overflow - dropped oldest item for request {request.request_id}")
+        metrics.QUEUE_OVERFLOW.inc()
 
     return SynthesizeResponse(
         status="queued",
@@ -93,6 +134,10 @@ async def get_next_audio() -> Response:
             status_code=204,
             headers=headers,
         )
+
+    # Track audio served
+    metrics.AUDIO_CHUNKS_SERVED.inc()
+    metrics.AUDIO_BYTES_SERVED.inc(len(chunk.audio_data))
 
     return Response(
         content=chunk.audio_data,

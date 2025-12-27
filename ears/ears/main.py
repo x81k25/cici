@@ -34,6 +34,7 @@ from websockets.server import serve, WebSocketServerProtocol
 from ears.config import config
 from ears.audio.vad_processor import create_vad_processor
 from ears.audio.audio_analyzer import AudioAnalyzer
+from ears import metrics
 
 # configure logging level from config
 logger.remove()  # remove default handler
@@ -62,8 +63,10 @@ async def forward_to_mind(text: str):
                 json={"text": text}
             )
             logger.debug(f"MIND response: {response.json()}")
+            metrics.MIND_FORWARDS.labels(status="success").inc()
     except Exception as e:
         logger.warning(f"Failed to forward to MIND: {e}")
+        metrics.MIND_FORWARDS.labels(status="error").inc()
 
 
 # ------------------------------------------------------------------------------
@@ -119,13 +122,17 @@ async def handle_audio_stream(websocket: WebSocketServerProtocol, debug_mode: bo
 
             state["chunk_count"] += 1
 
+            # Track audio metrics
+            metrics.AUDIO_CHUNKS_RECEIVED.inc()
+            metrics.AUDIO_BYTES_RECEIVED.inc(len(message))
+
             # Debug mode: analyze chunk and send diagnostics
             if analyzer:
-                metrics, defects = analyzer.analyze_chunk(message)
+                audio_metrics, defects = analyzer.analyze_chunk(message)
                 await send_json(DebugMessage(
                     chunk_index=state["chunk_count"],
-                    sample_count=metrics.sample_count,
-                    duration_ms=metrics.duration_ms,
+                    sample_count=audio_metrics.sample_count,
+                    duration_ms=audio_metrics.duration_ms,
                     defects=[
                         AudioDefect(
                             code=d.code,
@@ -137,12 +144,12 @@ async def handle_audio_stream(websocket: WebSocketServerProtocol, debug_mode: bo
                         for d in defects
                     ],
                     metrics={
-                        "rms": metrics.rms,
-                        "peak": metrics.peak,
-                        "dc_offset": metrics.dc_offset,
-                        "clipping_ratio": metrics.clipping_ratio,
-                        "zero_crossing_rate": metrics.zero_crossing_rate,
-                        "spectral_centroid": metrics.spectral_centroid,
+                        "rms": audio_metrics.rms,
+                        "peak": audio_metrics.peak,
+                        "dc_offset": audio_metrics.dc_offset,
+                        "clipping_ratio": audio_metrics.clipping_ratio,
+                        "zero_crossing_rate": audio_metrics.zero_crossing_rate,
+                        "spectral_centroid": audio_metrics.spectral_centroid,
                     },
                 ))
 
@@ -156,6 +163,9 @@ async def handle_audio_stream(websocket: WebSocketServerProtocol, debug_mode: bo
                         text=result["text"],
                         final=result.get("final", True)
                     ))
+                    # Track transcription
+                    metrics.TRANSCRIPTIONS_TOTAL.labels(status="success").inc()
+                    metrics.VAD_SPEECH_SEGMENTS.inc()
                     # Forward to MIND
                     await forward_to_mind(result["text"])
 
@@ -204,15 +214,24 @@ async def handler(websocket: WebSocketServerProtocol):
     query_params = parse_qs(parsed.query)
     debug_mode = query_params.get("debug", ["false"])[0].lower() == "true"
 
+    # Track connection metrics
+    metrics.WEBSOCKET_CONNECTIONS.inc()
+    metrics.ACTIVE_CONNECTIONS.inc()
+    if debug_mode:
+        metrics.DEBUG_CONNECTIONS.inc()
+
     logger.info(f"new connection from {websocket.remote_address}, debug={debug_mode}")
-    await handle_audio_stream(websocket, debug_mode=debug_mode)
+    try:
+        await handle_audio_stream(websocket, debug_mode=debug_mode)
+    finally:
+        metrics.ACTIVE_CONNECTIONS.dec()
 
 
 # ------------------------------------------------------------------------------
 # server startup
 # ------------------------------------------------------------------------------
 
-async def main(host: str = None, port: int = None, ssl_context=None):
+async def main(host: str = None, port: int = None, ssl_context=None, metrics_port: int = None):
     """
     Start the EARS WebSocket server.
 
@@ -220,11 +239,17 @@ async def main(host: str = None, port: int = None, ssl_context=None):
         host: Host to bind to (defaults to config).
         port: Port to bind to (defaults to config).
         ssl_context: Optional SSL context for secure connections.
+        metrics_port: Port for Prometheus metrics (defaults to port + 1000).
     """
     host = host or config.ears_host
     port = port or config.ears_port
+    metrics_port = metrics_port or (port + 1000)  # Default: 8766 + 1000 = 9766
 
     logger.info(f"starting EARS transcription server on {host}:{port}")
+
+    # Start metrics HTTP server
+    metrics_runner = await metrics.start_metrics_server(host, metrics_port)
+    logger.info(f"metrics server running on http://{host}:{metrics_port}/metrics")
 
     # Handle shutdown gracefully
     stop = asyncio.Event()
@@ -251,6 +276,8 @@ async def main(host: str = None, port: int = None, ssl_context=None):
         logger.info("send raw PCM audio (Int16, 16kHz, mono) to receive transcriptions")
         await stop.wait()
 
+    # Cleanup metrics server
+    await metrics.stop_metrics_server(metrics_runner)
     logger.info("server shutdown complete")
 
 
