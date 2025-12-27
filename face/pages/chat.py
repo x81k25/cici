@@ -226,7 +226,7 @@ class AudioProcessor:
         self.ws_thread = None
         # Buffer for accumulating audio samples (Int16 = 2 bytes per sample)
         self.sample_buffer = bytearray()
-        self.target_bytes = int(TARGET_SAMPLE_RATE * chunk_duration_ms / 1000) * 2
+        self.target_bytes = int(TARGET_SAMPLE_RATE * self.chunk_duration_ms / 1000) * 2
 
     def start(self):
         """Start the WebSocket connection in a background thread."""
