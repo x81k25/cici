@@ -141,7 +141,7 @@ public class MainActivity extends AppCompatActivity
                         + "  [" + host + "]";
                 statusBar.setText(status);
 
-                if (mind) {
+                if (mind && mouth) {
                     audioPlayer.startPolling();
                 }
             });

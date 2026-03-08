@@ -40,17 +40,25 @@ public class AudioPlayer {
         polling = true;
 
         pollThread = new Thread(() -> {
+            int consecutiveErrors = 0;
             while (polling) {
                 try {
                     MouthClient.AudioResult result = mouthClient.getNextAudio();
+                    consecutiveErrors = 0;
                     if (result != null && result.audioData != null) {
                         playWav(result.audioData);
                     } else {
                         Thread.sleep(500);
                     }
                 } catch (IOException e) {
-                    if (listener != null) listener.onError("MOUTH poll error: " + e.getMessage());
-                    try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                    consecutiveErrors++;
+                    // Only report first error, then stay quiet until recovered
+                    if (consecutiveErrors == 1 && listener != null) {
+                        listener.onError("MOUTH poll error: " + e.getMessage());
+                    }
+                    // Back off: 2s, 4s, 8s, max 15s
+                    long backoff = Math.min(2000L * (1L << (consecutiveErrors - 1)), 15000L);
+                    try { Thread.sleep(backoff); } catch (InterruptedException ignored) { break; }
                 } catch (InterruptedException ignored) {
                     break;
                 }

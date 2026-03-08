@@ -29,12 +29,16 @@ public class EarsClient extends WebSocketListener {
     private boolean debug;
     private TranscriptionListener listener;
     private volatile boolean connected = false;
+    private volatile boolean shouldReconnect = false;
 
     public EarsClient(String host, int port, boolean debug) {
         this.host = host;
         this.port = port;
         this.debug = debug;
-        this.client = new OkHttpClient();
+        this.client = new OkHttpClient.Builder()
+                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(0, java.util.concurrent.TimeUnit.SECONDS)
+                .build();
     }
 
     public void updateEndpoint(String host, int port, boolean debug) {
@@ -48,6 +52,11 @@ public class EarsClient extends WebSocketListener {
     }
 
     public void connect() {
+        shouldReconnect = true;
+        doConnect();
+    }
+
+    private void doConnect() {
         String url = "ws://" + host + ":" + port + "/";
         if (debug) {
             url += "?debug=true";
@@ -58,6 +67,7 @@ public class EarsClient extends WebSocketListener {
     }
 
     public void disconnect() {
+        shouldReconnect = false;
         if (webSocket != null) {
             webSocket.close(1000, "Client disconnect");
             webSocket = null;
@@ -105,8 +115,17 @@ public class EarsClient extends WebSocketListener {
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
         connected = false;
-        if (listener != null) listener.onError("WebSocket error: " + t.getMessage());
-        if (listener != null) listener.onDisconnected();
+        if (shouldReconnect) {
+            if (listener != null) listener.onError("WebSocket error: " + t.getMessage() + " (retrying...)");
+            // Auto-reconnect after 2 seconds
+            new Thread(() -> {
+                try { Thread.sleep(2000); } catch (InterruptedException ignored) { return; }
+                if (shouldReconnect) doConnect();
+            }).start();
+        } else {
+            if (listener != null) listener.onError("WebSocket error: " + t.getMessage());
+            if (listener != null) listener.onDisconnected();
+        }
     }
 
     @Override
