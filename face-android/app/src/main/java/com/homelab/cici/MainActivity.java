@@ -170,6 +170,11 @@ public class MainActivity extends AppCompatActivity
         if (result == null || result.messages == null) return;
 
         for (MindClient.MessageEntry entry : result.messages) {
+            if (entry.error != null && !entry.error.isEmpty()) {
+                addMessage(new Message(Message.Type.ERROR, entry.error));
+                continue;
+            }
+
             switch (entry.type) {
                 case "llm_response":
                     String prefix = entry.model != null ? "[" + entry.model + "] " : "";

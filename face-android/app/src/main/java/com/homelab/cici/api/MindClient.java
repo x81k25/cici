@@ -66,13 +66,15 @@ public class MindClient {
         public final String model;
         public final String command;
         public final Integer exitCode;
+        public final String error;
 
-        public MessageEntry(String type, String content, String model, String command, Integer exitCode) {
+        public MessageEntry(String type, String content, String model, String command, Integer exitCode, String error) {
             this.type = type;
             this.content = content;
             this.model = model;
             this.command = command;
             this.exitCode = exitCode;
+            this.error = error;
         }
     }
 
@@ -119,13 +121,14 @@ public class MindClient {
                 JsonArray arr = json.getAsJsonArray("messages");
                 for (JsonElement el : arr) {
                     JsonObject msg = el.getAsJsonObject();
-                    String type = msg.has("type") ? msg.get("type").getAsString() : "";
-                    String content = msg.has("content") ? msg.get("content").getAsString() : "";
-                    String model = msg.has("model") ? msg.get("model").getAsString() : null;
-                    String command = msg.has("command") ? msg.get("command").getAsString() : null;
+                    String type = msg.has("type") && !msg.get("type").isJsonNull() ? msg.get("type").getAsString() : "";
+                    String content = msg.has("content") && !msg.get("content").isJsonNull() ? msg.get("content").getAsString() : "";
+                    String model = msg.has("model") && !msg.get("model").isJsonNull() ? msg.get("model").getAsString() : null;
+                    String command = msg.has("command") && !msg.get("command").isJsonNull() ? msg.get("command").getAsString() : null;
                     Integer exitCode = msg.has("exit_code") && !msg.get("exit_code").isJsonNull()
                             ? msg.get("exit_code").getAsInt() : null;
-                    messages.add(new MessageEntry(type, content, model, command, exitCode));
+                    String error = msg.has("error") && !msg.get("error").isJsonNull() ? msg.get("error").getAsString() : null;
+                    messages.add(new MessageEntry(type, content, model, command, exitCode, error));
                 }
             }
 
