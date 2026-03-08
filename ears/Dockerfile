@@ -1,27 +1,28 @@
-FROM python:3.11-slim
+FROM 192.168.50.2:5050/ai-ml/torch-base:torch2.5-cu121
 
 WORKDIR /app
-
-# Install uv, FFmpeg (for pydub), and audio processing dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    curl \
-    && curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV PATH="/root/.local/bin:$PATH"
 
 # Copy project files
 COPY pyproject.toml README.md ./
 COPY ears/ ./ears/
 
-# Use CPU-only PyTorch to keep image small (~700MB vs ~4GB)
-ENV UV_TORCH_BACKEND=cpu
-RUN uv sync --no-dev
+# Install app-specific dependencies only (torch, faster-whisper already in base)
+RUN uv pip install --system --no-cache-dir \
+    aiohttp \
+    httpx \
+    loguru \
+    prometheus-client \
+    pydantic \
+    pydantic-settings \
+    pydub \
+    python-dotenv \
+    pyyaml \
+    silero-vad \
+    websockets
 
 # Create cache directory for Whisper models
 RUN mkdir -p /root/.cache/huggingface
 
 EXPOSE 8766
 
-CMD ["uv", "run", "python", "-m", "ears.main"]
+CMD ["python", "-m", "ears.main"]
