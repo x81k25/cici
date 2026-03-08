@@ -1,0 +1,53 @@
+stages:
+  - build
+
+variables:
+  REGISTRY: 192.168.50.2:5050
+  IMAGE_PREFIX: 192.168.50.2:5050/ai-ml/cici
+
+.build-template: &build-template
+  stage: build
+  tags:
+    - k8s
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${REGISTRY}\":{\"auth\":\"$(printf '%s:%s' ${CI_REGISTRY_USER} ${CI_REGISTRY_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
+
+build-mind:
+  <<: *build-template
+  script:
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}/mind"
+      --dockerfile "${CI_PROJECT_DIR}/mind/Dockerfile"
+      --destination "${IMAGE_PREFIX}/mind:latest"
+      --insecure
+
+build-ears:
+  <<: *build-template
+  script:
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}/ears"
+      --dockerfile "${CI_PROJECT_DIR}/ears/Dockerfile"
+      --destination "${IMAGE_PREFIX}/ears:latest"
+      --insecure
+
+build-mouth:
+  <<: *build-template
+  script:
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}/mouth"
+      --dockerfile "${CI_PROJECT_DIR}/mouth/Dockerfile"
+      --destination "${IMAGE_PREFIX}/mouth:latest"
+      --insecure
+
+build-face:
+  <<: *build-template
+  script:
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}/face"
+      --dockerfile "${CI_PROJECT_DIR}/face/Dockerfile"
+      --destination "${IMAGE_PREFIX}/face:latest"
+      --insecure

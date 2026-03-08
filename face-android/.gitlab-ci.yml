@@ -1,0 +1,31 @@
+image: eclipse-temurin:17-jdk
+
+variables:
+  ANDROID_COMPILE_SDK: "35"
+  ANDROID_BUILD_TOOLS: "35.0.0"
+  ANDROID_SDK_TOOLS: "14742923"
+
+before_script:
+  - apt-get -qq update && apt-get -qq install -y wget unzip
+  - export ANDROID_HOME="/opt/android-sdk"
+  - mkdir -p $ANDROID_HOME/cmdline-tools
+  - wget -q "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS}_latest.zip" -O /tmp/cmdtools.zip
+  - unzip -q /tmp/cmdtools.zip -d $ANDROID_HOME/cmdline-tools
+  - mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+  - yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+  - $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}" > /dev/null
+  - chmod +x ./gradlew
+
+stages:
+  - build
+
+build-debug:
+  stage: build
+  tags:
+    - k8s
+  script:
+    - ./gradlew assembleDebug
+  artifacts:
+    paths:
+      - app/build/outputs/apk/debug/app-debug.apk
+    expire_in: 30 days

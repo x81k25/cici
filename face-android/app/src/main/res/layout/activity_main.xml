@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#121212">
+
+    <!-- Status bar -->
+    <TextView
+        android:id="@+id/status_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#1E1E1E"
+        android:padding="8dp"
+        android:text="Connecting..."
+        android:textColor="#9E9E9E"
+        android:textSize="12sp"
+        android:fontFamily="monospace" />
+
+    <!-- Message list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/message_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp"
+        android:clipToPadding="false" />
+
+    <!-- Mic recording indicator -->
+    <TextView
+        android:id="@+id/mic_indicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#331B5E20"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="Recording..."
+        android:textColor="#81C784"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <!-- Input bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#1E1E1E"
+        android:padding="8dp"
+        android:gravity="center_vertical">
+
+        <ImageButton
+            android:id="@+id/btn_settings"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_preferences"
+            android:contentDescription="Settings"
+            android:scaleType="centerInside" />
+
+        <EditText
+            android:id="@+id/text_input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/input_background"
+            android:hint="Type a message..."
+            android:textColorHint="#616161"
+            android:textColor="#E0E0E0"
+            android:padding="10dp"
+            android:textSize="14sp"
+            android:maxLines="3"
+            android:imeOptions="actionSend"
+            android:inputType="text" />
+
+        <ImageButton
+            android:id="@+id/btn_mic"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_btn_speak_now"
+            android:contentDescription="Voice input"
+            android:scaleType="centerInside" />
+
+        <ImageButton
+            android:id="@+id/btn_send"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_send"
+            android:contentDescription="Send"
+            android:scaleType="centerInside" />
+
+    </LinearLayout>
+
+</LinearLayout>

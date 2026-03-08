@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#121212"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Settings"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Server Host"
+        android:textColor="#9E9E9E"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/input_host"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/input_background"
+        android:textColor="#E0E0E0"
+        android:padding="12dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
+        android:inputType="text" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MIND Port"
+        android:textColor="#9E9E9E"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/input_mind_port"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/input_background"
+        android:textColor="#E0E0E0"
+        android:padding="12dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
+        android:inputType="number" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="EARS Port"
+        android:textColor="#9E9E9E"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/input_ears_port"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/input_background"
+        android:textColor="#E0E0E0"
+        android:padding="12dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
+        android:inputType="number" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MOUTH Port"
+        android:textColor="#9E9E9E"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/input_mouth_port"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/input_background"
+        android:textColor="#E0E0E0"
+        android:padding="12dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
+        android:inputType="number" />
+
+    <Switch
+        android:id="@+id/switch_ears_debug"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="EARS Debug Mode"
+        android:textColor="#E0E0E0"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/btn_save"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Save"
+        android:backgroundTint="#1565C0" />
+
+</LinearLayout>
