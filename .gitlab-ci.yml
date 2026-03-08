@@ -34,7 +34,7 @@ build-ears:
       --destination "${IMAGE_PREFIX}/ears:latest"
       --insecure
       --single-snapshot
-      --snapshotMode=redo
+      --compressed-caching=false
 
 build-mouth:
   <<: *build-template
