@@ -33,6 +33,8 @@ build-ears:
       --dockerfile "${CI_PROJECT_DIR}/ears/Dockerfile"
       --destination "${IMAGE_PREFIX}/ears:latest"
       --insecure
+      --single-snapshot
+      --snapshotMode=redo
 
 build-mouth:
   <<: *build-template
