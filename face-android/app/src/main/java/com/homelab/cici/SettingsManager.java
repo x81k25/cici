@@ -12,9 +12,9 @@ public class SettingsManager {
     private static final String KEY_EARS_DEBUG = "ears_debug";
 
     private static final String DEFAULT_HOST = "192.168.50.2";
-    private static final int DEFAULT_MIND_PORT = 8765;
-    private static final int DEFAULT_EARS_PORT = 8766;
-    private static final int DEFAULT_MOUTH_PORT = 8001;
+    private static final int DEFAULT_MIND_PORT = 30211;
+    private static final int DEFAULT_EARS_PORT = 30212;
+    private static final int DEFAULT_MOUTH_PORT = 30213;
 
     private final SharedPreferences prefs;
 
