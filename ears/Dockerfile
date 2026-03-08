@@ -15,7 +15,8 @@ ENV PATH="/root/.local/bin:$PATH"
 COPY pyproject.toml README.md ./
 COPY ears/ ./ears/
 
-# Install dependencies with uv (uses CPU torch by default)
+# Use CPU-only PyTorch to keep image small (~700MB vs ~4GB)
+ENV UV_TORCH_BACKEND=cpu
 RUN uv sync --no-dev
 
 # Create cache directory for Whisper models
