@@ -38,8 +38,12 @@ def load_model(
     compute_type = compute_type or config.whisper.compute_type
 
     if _model is None:
-        logger.info(f"loading faster-whisper model: {model_size} on {device} ({compute_type})")
-        _model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        device_index = config.whisper.device_index
+        logger.info(f"loading faster-whisper model: {model_size} on {device}:{device_index} ({compute_type})")
+        _model = WhisperModel(
+            model_size, device=device, device_index=device_index,
+            compute_type=compute_type,
+        )
         logger.info("faster-whisper model loaded successfully")
     return _model
 

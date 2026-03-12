@@ -70,8 +70,9 @@ class VADConfig(BaseModel):
 class WhisperConfig(BaseModel):
     """Whisper transcription configuration."""
     model_size: str = "small"
-    device: str = "cpu"
-    compute_type: str = "int8"
+    device: str = "cuda"
+    device_index: int = 0
+    compute_type: str = "float16"
     language: str = "en"
     beam_size: int = 5
     vad_min_silence_duration_ms: int = 500

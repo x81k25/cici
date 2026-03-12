@@ -143,9 +143,19 @@ class TestWhisperGPUPerformance:
 
     @SKIP_NO_CUDNN
     def test_gpu_faster_than_cpu(self):
-        """GPU transcription should be faster than CPU for a 5s clip."""
-        _, cpu_time, _ = _time_whisper_transcribe("cpu", "int8", "small", 5.0)
-        _, gpu_time, _ = _time_whisper_transcribe("cuda", "float16", "small", 5.0)
+        """GPU transcription should be faster than CPU for a 10s clip.
+
+        Uses a longer clip to amortize GPU launch overhead and includes
+        a warmup transcription to exclude first-inference JIT costs.
+        """
+        duration = 10.0
+        # Warmup: load + transcribe once on each device to warm caches
+        _time_whisper_transcribe("cpu", "int8", "small", 1.0)
+        _time_whisper_transcribe("cuda", "float16", "small", 1.0)
+
+        # Benchmark on longer clip
+        _, cpu_time, _ = _time_whisper_transcribe("cpu", "int8", "small", duration)
+        _, gpu_time, _ = _time_whisper_transcribe("cuda", "float16", "small", duration)
 
         speedup = cpu_time / gpu_time if gpu_time > 0 else 0
         print(f"\n  CPU: {cpu_time:.2f}s | GPU: {gpu_time:.2f}s | Speedup: {speedup:.1f}x")

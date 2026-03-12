@@ -27,11 +27,14 @@ whisper:
   # Model size: tiny, base, small, medium, large-v3
   model_size: "small"
 
-  # Device: cpu or cuda
-  device: "cpu"
+  # Device: cuda (GPU required — fail fast if unavailable)
+  device: "cuda"
 
-  # Quantization: int8 (CPU) or float16 (GPU)
-  compute_type: "int8"
+  # GPU index: 0 = RTX 3060 in PyTorch/CTranslate2 (nvidia-smi order differs)
+  device_index: 0
+
+  # Quantization: float16 (requires cuDNN 9 on host)
+  compute_type: "float16"
 
   # Language code for transcription
   language: "en"

@@ -1,11 +1,15 @@
 package com.homelab.cici;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
@@ -34,7 +38,10 @@ import java.util.concurrent.Executors;
 public class MainActivity extends AppCompatActivity
         implements EarsClient.TranscriptionListener, AudioPlayer.PlaybackListener {
 
+    private static final String TAG = "MainActivity";
     private static final int PERMISSION_REQUEST_AUDIO = 100;
+    static final String ACTION_INJECT_AUDIO = "com.homelab.cici.INJECT_AUDIO";
+    static final String EXTRA_AUDIO_PATH = "audio_path";
 
     private SettingsManager settings;
     private MindClient mindClient;
@@ -59,6 +66,20 @@ public class MainActivity extends AppCompatActivity
     private final List<Message> messages = new ArrayList<>();
     private boolean micActive = false;
 
+    /** Receives INJECT_AUDIO broadcasts for e2e testing. */
+    private final BroadcastReceiver audioInjectionReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String path = intent.getStringExtra(EXTRA_AUDIO_PATH);
+            if (path == null || path.isEmpty()) {
+                Log.w(TAG, "INJECT_AUDIO: no audio_path extra");
+                return;
+            }
+            Log.i(TAG, "INJECT_AUDIO: streaming " + path);
+            startFileRecording(path);
+        }
+    };
+
     private final ActivityResultLauncher<Intent> settingsLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK) {
@@ -75,6 +96,10 @@ public class MainActivity extends AppCompatActivity
         initViews();
         initClients();
         checkHealth();
+
+        // Register test audio injection receiver
+        registerReceiver(audioInjectionReceiver, new IntentFilter(ACTION_INJECT_AUDIO),
+                Context.RECEIVER_EXPORTED);
     }
 
     private void initViews() {
@@ -240,6 +265,45 @@ public class MainActivity extends AppCompatActivity
         }, 300);
     }
 
+    /**
+     * Stream a PCM file to EARS as if it came from the mic.
+     * Triggered by INJECT_AUDIO broadcast for e2e testing.
+     */
+    private void startFileRecording(String filePath) {
+        // Stop any active recording first
+        if (micActive) {
+            audioRecorder.stop();
+            earsClient.disconnect();
+            micActive = false;
+        }
+
+        earsClient.connect();
+        mainHandler.postDelayed(() -> {
+            if (audioRecorder.startFromFile(filePath)) {
+                micActive = true;
+                btnMic.setImageResource(android.R.drawable.ic_media_pause);
+                micIndicator.setVisibility(View.VISIBLE);
+                addMessage(new Message(Message.Type.SYSTEM, "Listening... (file injection)"));
+
+                // Auto-stop when file finishes streaming
+                executor.execute(() -> {
+                    while (audioRecorder.isRecording()) {
+                        try { Thread.sleep(200); } catch (InterruptedException ignored) { break; }
+                    }
+                    mainHandler.post(() -> {
+                        earsClient.disconnect();
+                        micActive = false;
+                        btnMic.setImageResource(android.R.drawable.ic_btn_speak_now);
+                        micIndicator.setVisibility(View.GONE);
+                    });
+                });
+            } else {
+                addMessage(new Message(Message.Type.ERROR, "Failed to read audio file: " + filePath));
+                earsClient.disconnect();
+            }
+        }, 500); // slightly longer delay for WebSocket connect
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -315,6 +379,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        try { unregisterReceiver(audioInjectionReceiver); } catch (Exception ignored) {}
         audioRecorder.stop();
         earsClient.disconnect();
         audioPlayer.stopPolling();

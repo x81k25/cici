@@ -455,6 +455,7 @@ dependencies = [
 all = [
     { name = "aiohttp" },
     { name = "claude-agent-sdk" },
+    { name = "ctranslate2" },
     { name = "fastapi" },
     { name = "faster-whisper" },
     { name = "numpy" },
@@ -467,16 +468,19 @@ all = [
     { name = "streamlit" },
     { name = "streamlit-webrtc" },
     { name = "torch" },
+    { name = "torchaudio" },
     { name = "uvicorn" },
     { name = "websockets" },
 ]
 ears = [
     { name = "aiohttp" },
+    { name = "ctranslate2" },
     { name = "faster-whisper" },
     { name = "numpy" },
     { name = "pydub" },
     { name = "silero-vad" },
     { name = "torch" },
+    { name = "torchaudio" },
     { name = "websockets" },
 ]
 face = [
@@ -512,15 +516,16 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiohttp", marker = "extra == 'ears'", specifier = ">=3.9.0" },
+    { name = "aiohttp", marker = "extra == 'ears'", specifier = "==3.13.3" },
     { name = "cici", extras = ["ears", "mouth", "mind", "face", "test"], marker = "extra == 'all'" },
     { name = "claude-agent-sdk", marker = "extra == 'mind'", specifier = ">=0.1.0" },
+    { name = "ctranslate2", marker = "extra == 'ears'", specifier = "==4.6.2" },
     { name = "fastapi", marker = "extra == 'mind'", specifier = ">=0.115.0" },
     { name = "fastapi", marker = "extra == 'mouth'", specifier = ">=0.109.0" },
-    { name = "faster-whisper", marker = "extra == 'ears'", specifier = ">=1.2.1" },
+    { name = "faster-whisper", marker = "extra == 'ears'", specifier = "==1.2.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "loguru", specifier = ">=0.7.0" },
-    { name = "numpy", marker = "extra == 'ears'", specifier = ">=2.3.5" },
+    { name = "numpy", marker = "extra == 'ears'", specifier = "==2.3.5" },
     { name = "onnxruntime-gpu", marker = "extra == 'gpu-test'" },
     { name = "piper-tts", marker = "extra == 'mind'", specifier = ">=1.3.0" },
     { name = "piper-tts", marker = "extra == 'mouth'", specifier = ">=1.2.0" },
@@ -533,13 +538,14 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=1.3.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "silero-vad", marker = "extra == 'ears'", specifier = ">=6.2.0" },
+    { name = "silero-vad", marker = "extra == 'ears'", specifier = "==6.2.0" },
     { name = "streamlit", marker = "extra == 'face'", specifier = ">=1.40.0" },
     { name = "streamlit-webrtc", marker = "extra == 'face'", specifier = ">=0.64.5" },
-    { name = "torch", marker = "extra == 'ears'", specifier = ">=2.0.0", index = "https://download.pytorch.org/whl/cu121" },
+    { name = "torch", marker = "extra == 'ears'", specifier = "==2.5.1", index = "https://download.pytorch.org/whl/cu121" },
+    { name = "torchaudio", marker = "extra == 'ears'", specifier = "==2.5.1", index = "https://download.pytorch.org/whl/cu121" },
     { name = "uvicorn", marker = "extra == 'mind'", specifier = ">=0.34.0" },
     { name = "uvicorn", marker = "extra == 'mouth'", specifier = ">=0.27.0" },
-    { name = "websockets", marker = "extra == 'ears'", specifier = ">=12.0" },
+    { name = "websockets", marker = "extra == 'ears'", specifier = "==15.0.1" },
     { name = "websockets", marker = "extra == 'face'", specifier = ">=15.0.1" },
 ]
 provides-extras = ["ears", "mouth", "mind", "face", "test", "gpu-test", "all"]
@@ -2739,20 +2745,16 @@ wheels = [
 
 [[package]]
 name = "torchaudio"
-version = "2.5.1"
-source = { registry = "https://pypi.org/simple" }
+version = "2.5.1+cu121"
+source = { registry = "https://download.pytorch.org/whl/cu121" }
 dependencies = [
     { name = "torch" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/97/1780e3dd8733da30ff1051b8cbd8006e4824b76028558a58c31e790c09cd/torchaudio-2.5.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7005354aa7dda9ef908e13c2566ee1fe0bd6d7f5bae0583b5e53016cd229fc34", size = 1801479, upload-time = "2024-10-29T17:41:32.712Z" },
-    { url = "https://files.pythonhosted.org/packages/41/33/0f21b15f8e231bb55578f6b32e8c18675585b7bf97cb0aee96b1591e4193/torchaudio-2.5.1-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:7af3f7f92fd33bc9f036a60cdeda4cbeb6bccebd18eae89776dd1e8ed042672e", size = 3374576, upload-time = "2024-10-29T17:41:15.723Z" },
-    { url = "https://files.pythonhosted.org/packages/0c/0e/89294062dbca27ed8bc4a89d9ceea0bd64b45ebc005e0306871b3f55bb31/torchaudio-2.5.1-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:4ba24769a72bd686903feaf1040c895d710af2ffbcd25ee7a9794ee285561b26", size = 1672185, upload-time = "2024-10-29T17:41:17.439Z" },
-    { url = "https://files.pythonhosted.org/packages/32/6a/019e426ab4af487167182a19e115fc03234fe28bc30e22cb0e1a9958f70e/torchaudio-2.5.1-cp311-cp311-win_amd64.whl", hash = "sha256:cba8ccab1bff0496ccdc71ebbdcd31d0f7bf97ff3c46276425ff86460f6f8967", size = 2439124, upload-time = "2024-10-29T17:41:28.821Z" },
-    { url = "https://files.pythonhosted.org/packages/03/ab/151037a41e2cf4a5d489dfe5e7196b755e0fd83958d5ca7ad8ed85afcb1c/torchaudio-2.5.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:f1cbfdfd1bbdfbe7289d47a74f36ff6c5d87c3205606202fef5a7fb693f61cf0", size = 1798042, upload-time = "2024-10-29T17:41:27.454Z" },
-    { url = "https://files.pythonhosted.org/packages/34/1c/345d11bf492a1414dced70a9572ff1eb2c73013578d24fb4d728a91a09d1/torchaudio-2.5.1-cp312-cp312-manylinux1_x86_64.whl", hash = "sha256:9c8fb06fbd8d2016e7b7caf15a3231867c792a2e3b0f2f8f9013633e9c2ce412", size = 3371851, upload-time = "2024-10-29T17:41:24.739Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/74/a27c6d0d4c4fad90462f08e99222d3557f118beb8fb560b87d607a727a0a/torchaudio-2.5.1-cp312-cp312-manylinux2014_aarch64.whl", hash = "sha256:6bb65416405f40e00b20701257c16e7493bfdd7188e02e87cc5b389c31c10c2c", size = 1668849, upload-time = "2024-10-29T17:41:30.51Z" },
-    { url = "https://files.pythonhosted.org/packages/99/a1/4220b73ba6e083229099892d9126e01836afe96cf7e2fbfe60b327506f49/torchaudio-2.5.1-cp312-cp312-win_amd64.whl", hash = "sha256:ec8f12d6be12aed248a0d65a76c7bb341ee5eef969fe2e9dc3154c7cfba1bdf4", size = 2435747, upload-time = "2024-10-29T17:41:39.561Z" },
+    { url = "https://download-r2.pytorch.org/whl/cu121/torchaudio-2.5.1%2Bcu121-cp311-cp311-linux_x86_64.whl", hash = "sha256:9e6f03e6410cb3557978dea25fb30ce3e7c165e8377fcc8e0e1ddc700503d38b" },
+    { url = "https://download-r2.pytorch.org/whl/cu121/torchaudio-2.5.1%2Bcu121-cp311-cp311-win_amd64.whl", hash = "sha256:f9397ff9c6e8fa1b4fdc94939411ac65fe43f66d66367ee80603bc7ce10e18e2" },
+    { url = "https://download-r2.pytorch.org/whl/cu121/torchaudio-2.5.1%2Bcu121-cp312-cp312-linux_x86_64.whl", hash = "sha256:5648a01f23033f15d60dc638f91c2d4c66c0a01621162471e806064acda63b70" },
+    { url = "https://download-r2.pytorch.org/whl/cu121/torchaudio-2.5.1%2Bcu121-cp312-cp312-win_amd64.whl", hash = "sha256:80400d75da5852bb5491f6259d47a163a00c2d1479ed57d3d95fde205e1b2815" },
 ]
 
 [[package]]

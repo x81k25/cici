@@ -126,6 +126,7 @@ CLAUDE.md
 # packaging
 MANIFEST.in
 *.tar.gz
+*.deb
 
 # profiling
 *.prof
