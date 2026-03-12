@@ -1,0 +1,11 @@
+.venv
+*/.venv
+.git
+tests/
+*/tests/
+docs/
+face-android/
+audio-sample-generation/
+*.pyc
+__pycache__
+*/__pycache__

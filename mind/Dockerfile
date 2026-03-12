@@ -11,13 +11,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV PATH="/root/.local/bin:$PATH"
 
-# Copy project files
-COPY pyproject.toml README.md ./
-COPY mind/ ./mind/
-COPY config/ ./config/
+# Copy root project files for dependency resolution
+COPY pyproject.toml uv.lock ./
+
+# Copy mind module and config
+COPY mind/mind/ ./mind/mind/
+COPY mind/config/ ./config/
 
 # Install dependencies with uv
-RUN uv sync --no-dev
+RUN uv sync --no-dev --extra mind
 
 # Create logs directory
 RUN mkdir -p /app/logs

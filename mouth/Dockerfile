@@ -14,16 +14,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV PATH="/root/.local/bin:$PATH"
 
-# Copy project files
-COPY pyproject.toml .
-COPY app/ ./app/
-COPY config/ ./config/
+# Copy root project files for dependency resolution
+COPY pyproject.toml uv.lock ./
+
+# Copy mouth module and config
+COPY mouth/mouth/ ./mouth/mouth/
+COPY mouth/config/ ./config/
 
 # Install dependencies with uv
-RUN uv sync --no-dev
+RUN uv sync --no-dev --extra mouth
 
 # Create models directory and download Piper voice model
-# URL pattern: https://huggingface.co/rhasspy/piper-voices/resolve/main/{lang}/{lang_region}/{speaker}/{quality}/{voice}.onnx
 RUN mkdir -p /models && \
     LANG_CODE=$(echo ${PIPER_VOICE} | cut -d'-' -f1 | cut -d'_' -f1) && \
     LANG_REGION=$(echo ${PIPER_VOICE} | cut -d'-' -f1) && \
@@ -40,4 +41,4 @@ ENV PIPER_VOICE=${PIPER_VOICE}
 
 EXPOSE 8001
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uv", "run", "uvicorn", "mouth.main:app", "--host", "0.0.0.0", "--port", "8001"]

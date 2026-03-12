@@ -7,11 +7,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
 
-from app.config import settings
-from app.models import SynthesizeRequest, SynthesizeResponse, QueueItem, QueueStatus
-from app.queue_manager import queue_manager
-from app.synthesizer import synthesizer
-from app import metrics
+from mouth.config import settings
+from mouth.models import SynthesizeRequest, SynthesizeResponse, QueueItem, QueueStatus
+from mouth.queue_manager import queue_manager
+from mouth.synthesizer import synthesizer
+from mouth import metrics
 
 # Configure logging
 logging.basicConfig(

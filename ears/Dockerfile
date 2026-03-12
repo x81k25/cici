@@ -2,23 +2,14 @@ FROM 192.168.50.2:5050/ai-ml/torch-base:torch2.5-cu121
 
 WORKDIR /app
 
-# Copy project files
-COPY pyproject.toml README.md ./
-COPY ears/ ./ears/
+# Copy root project files for dependency resolution
+COPY pyproject.toml uv.lock ./
 
-# Install app-specific dependencies only (torch, faster-whisper already in base)
-RUN uv pip install --system --no-cache-dir \
-    aiohttp \
-    httpx \
-    loguru \
-    prometheus-client \
-    pydantic \
-    pydantic-settings \
-    pydub \
-    python-dotenv \
-    pyyaml \
-    silero-vad \
-    websockets
+# Copy ears module
+COPY ears/ears/ ./ears/ears/
+
+# Install app-specific dependencies (torch, faster-whisper already in base)
+RUN uv pip install --system --no-cache-dir ".[ears]"
 
 # Create cache directory for Whisper models
 RUN mkdir -p /root/.cache/huggingface

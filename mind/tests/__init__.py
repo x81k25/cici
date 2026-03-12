@@ -1,1 +1,0 @@
-"""MIND test suite."""

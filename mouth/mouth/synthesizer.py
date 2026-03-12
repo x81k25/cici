@@ -8,8 +8,8 @@ from typing import Optional
 
 from piper import PiperVoice
 
-from app.config import settings
-from app.queue_manager import queue_manager, AudioChunk
+from mouth.config import settings
+from mouth.queue_manager import queue_manager, AudioChunk
 
 logger = logging.getLogger(__name__)
 

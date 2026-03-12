@@ -20,8 +20,8 @@ from pydantic_settings import BaseSettings
 
 def get_project_root() -> Path:
     """Get the project root directory (cici/)."""
-    # mouth/app/config.py -> mouth/app -> mouth -> cici
-    return Path(__file__).parent.parent.parent.parent
+    # mouth/mouth/config.py -> mouth/mouth -> mouth -> cici
+    return Path(__file__).parent.parent.parent
 
 
 def get_module_root() -> Path:

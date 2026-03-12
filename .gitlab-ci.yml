@@ -23,7 +23,7 @@ build-mind:
   <<: *build-template
   script:
     - /kaniko/executor
-      --context "${CI_PROJECT_DIR}/mind"
+      --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/mind/Dockerfile"
       --destination "${IMAGE_PREFIX}/mind:latest"
       --insecure
@@ -35,7 +35,7 @@ build-ears:
     KUBERNETES_MEMORY_LIMIT: "12Gi"
   script:
     - /kaniko/executor
-      --context "${CI_PROJECT_DIR}/ears"
+      --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/ears/Dockerfile"
       --destination "${IMAGE_PREFIX}/ears:latest"
       --insecure
@@ -46,7 +46,7 @@ build-mouth:
   <<: *build-template
   script:
     - /kaniko/executor
-      --context "${CI_PROJECT_DIR}/mouth"
+      --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/mouth/Dockerfile"
       --destination "${IMAGE_PREFIX}/mouth:latest"
       --insecure
@@ -55,7 +55,7 @@ build-face:
   <<: *build-template
   script:
     - /kaniko/executor
-      --context "${CI_PROJECT_DIR}/face"
+      --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/face/Dockerfile"
       --destination "${IMAGE_PREFIX}/face:latest"
       --insecure

@@ -1,29 +1,56 @@
 [project]
 name = "cici"
 version = "0.1.0"
-description = "Voice and text personal assistant - integration tests and coordination"
+description = "Voice and text personal assistant"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    # Core dependencies shared across modules for integration testing
+    # Core shared (used by 3+ modules)
+    "httpx>=0.28.1",
     "loguru>=0.7.0",
     "pydantic>=2.12.5",
-    "pydub>=0.25.1",
+    "pydantic-settings>=2.12.0",
+    "prometheus-client>=0.21.0",
     "python-dotenv>=1.2.1",
-    "websockets>=12.0",
-    # EARS dependencies (needed for integration tests)
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+ears = [
+    "aiohttp>=3.9.0",
     "faster-whisper>=1.2.1",
+    "numpy>=2.3.5",
+    "pydub>=0.25.1",
     "silero-vad>=6.2.0",
     "torch>=2.0.0",
-    "numpy>=2.3.5",
-    # MIND dependencies (needed for FACE↔MIND integration tests)
+    "websockets>=12.0",
+]
+mouth = [
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "piper-tts>=1.2.0",
+]
+mind = [
+    "claude-agent-sdk>=0.1.0",
     "fastapi>=0.115.0",
+    "piper-tts>=1.3.0",
     "uvicorn>=0.34.0",
-    "httpx>=0.28.1",
-    "pyyaml>=6.0",
-    # FACE dependencies (needed for Streamlit app tests)
+]
+face = [
     "streamlit>=1.40.0",
-    "pydantic-settings>=2.12.0",
+    "playwright>=1.57.0",
+    "streamlit-webrtc>=0.64.5",
+    "websockets>=15.0.1",
+]
+test = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]
+gpu-test = [
+    "onnxruntime-gpu",
+]
+all = [
+    "cici[ears,mouth,mind,face,test]",
 ]
 
 [build-system]
@@ -31,8 +58,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-# This is a coordination/testing package only, no source to ship
-packages = ["tests"]
+packages = ["ears/ears", "mind/mind", "mouth/mouth"]
 
 [dependency-groups]
 dev = [
@@ -40,8 +66,16 @@ dev = [
     "pytest-asyncio>=1.3.0",
 ]
 
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "ears/tests", "mind/tests", "face/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [

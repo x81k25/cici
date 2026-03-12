@@ -1,1 +1,0 @@
-"""EARS test suite."""

@@ -5,29 +5,32 @@ WORKDIR /app
 # Install uv and system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && curl -LsSf https://astral.sh/uv/install.sh \
+    | sh \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/root/.local/bin:$PATH"
 
-# Copy project files
-COPY pyproject.toml .
-COPY app.py .
-COPY config.py .
-COPY metrics.py .
-COPY mind_client.py .
-COPY mouth_client.py .
-COPY config/ ./config/
-COPY pages/ ./pages/
-COPY utils/ ./utils/
-COPY static/ ./static/
-COPY .streamlit/ ./.streamlit/
+# Copy root project files for dependency resolution
+COPY pyproject.toml uv.lock ./
+
+# Copy face application files
+COPY face/app.py .
+COPY face/config.py .
+COPY face/metrics.py .
+COPY face/mind_client.py .
+COPY face/mouth_client.py .
+COPY face/config/ ./config/
+COPY face/pages/ ./pages/
+COPY face/utils/ ./utils/
+COPY face/static/ ./static/
+COPY face/.streamlit/ ./.streamlit/
 
 # Override Streamlit config for Docker (no SSL)
 RUN echo '[server]\nenableStaticServing = true\n' > .streamlit/config.toml
 
 # Install dependencies with uv
-RUN uv sync --no-dev
+RUN uv sync --no-dev --extra face
 
 # Install playwright browsers (optional - for testing features only)
 # RUN uv run playwright install chromium --with-deps

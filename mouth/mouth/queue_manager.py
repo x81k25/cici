@@ -5,8 +5,8 @@ from collections import deque
 from typing import Optional
 from dataclasses import dataclass
 
-from app.config import settings
-from app.models import QueueItem
+from mouth.config import settings
+from mouth.models import QueueItem
 
 
 @dataclass

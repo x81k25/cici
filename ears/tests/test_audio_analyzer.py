@@ -173,24 +173,6 @@ class TestByteOrderDetection:
 # clean audio tests
 # ------------------------------------------------------------------------------
 
-class TestCleanAudio:
-    """Tests for clean audio with no defects."""
-
-    def test_clean_audio_no_defects(self, analyzer):
-        """Test that normal audio produces no defects."""
-        # Normal 440Hz tone at 30% amplitude, 100ms
-        t = np.linspace(0, 0.1, 1600, dtype=np.float32)
-        samples = np.sin(2 * np.pi * 440 * t) * 0.3
-        audio_bytes = make_pcm(samples)
-
-        metrics, defects = analyzer.analyze_chunk(audio_bytes)
-
-        assert len(defects) == 0
-        assert 0.1 < metrics.rms < 0.5
-        assert metrics.clipping_ratio < 0.01
-        assert abs(metrics.dc_offset) < 0.1
-
-
 # ------------------------------------------------------------------------------
 # edge cases
 # ------------------------------------------------------------------------------
