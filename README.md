@@ -99,12 +99,13 @@ sequenceDiagram
 
 ## Components
 
-| Component | Description | Port | Protocol |
-|-----------|-------------|------|----------|
-| **MIND** | Logic and routing service | 8765 | HTTP REST |
-| **EARS** | Audio transcription service | 8766 | WebSocket |
-| **MOUTH** | Text-to-speech service | 8001 | HTTP REST |
-| **FACE** | Streamlit frontend UI | 8501 | HTTP |
+| Component | Description | Port | NodePort | Protocol |
+|-----------|-------------|------|----------|----------|
+| **MIND** | Logic and routing service | 8765 | 30211 | HTTP REST |
+| **EARS** | Audio transcription service | 8766 | 30212 | WebSocket |
+| **MOUTH** | Text-to-speech service | 8001 | 30213 | HTTP REST |
+| **FACE** | Streamlit frontend UI | 8501 | 30210 | HTTP |
+| **FACE-Android** | Android mobile client | — | — | HTTP/WS |
 
 ### MIND - Logic & Routing
 
@@ -135,6 +136,17 @@ Streamlit-based web UI:
 - Command result display
 
 See [`face/README.md`](face/README.md) for details.
+
+### FACE-Android - Mobile Client
+
+Native Android app (`face-android/`):
+- Text and voice input with real-time transcription
+- Connects to MIND (HTTP), EARS (WebSocket), MOUTH (HTTP polling)
+- Configurable service endpoints via in-app settings
+- Default endpoints: `192.168.50.2` with k8s NodePorts (30211/30212/30213)
+- Android Auto stub for future car integration
+
+See [`docs/android-users-manual.md`](docs/android-users-manual.md) for ADB testing guide.
 
 ### MOUTH - Text-to-Speech
 
@@ -351,10 +363,10 @@ All modes are managed by MIND:
 
 ## External Services
 
-| Service | Purpose | URL |
-|---------|---------|-----|
-| Ollama | LLM inference | `http://192.168.50.2:31435` |
-| Anthropic API | Claude queries | `https://api.anthropic.com` |
+| Service | Purpose | External URL | k8s Internal |
+|---------|---------|-------------|--------------|
+| Ollama | LLM inference | `http://192.168.50.2:31435` | `http://local-llm.ai-ml.svc.cluster.local:11434` |
+| Anthropic API | Claude queries | `https://api.anthropic.com` | — |
 
 ## Docker Images
 
@@ -439,9 +451,33 @@ cici/
 ├── mind/                      # Logic & routing service
 ├── ears/                      # Transcription service
 ├── mouth/                     # Text-to-speech service
-├── face/                      # Frontend UI
+├── face/                      # Streamlit frontend UI
+├── face-android/              # Android mobile client
 ├── tests/                     # Integration tests
-├── .env.example               # Configuration template
+├── docs/                      # Cross-cutting documentation
+│   ├── android-users-manual.md
+│   ├── modes.md
+│   └── sample-conversations.md
+├── .env                       # Configuration (local dev)
 ├── docker-compose.yml         # Container orchestration
 └── README.md                  # This file
 ```
+
+## Kubernetes Deployment
+
+Services are deployed to the `ai-ml` namespace via ArgoCD GitOps from `/infra/k8s-manifests/ai-ml/`.
+
+### ConfigMap: `cici-config-dev`
+
+Shared configuration for all CICI services. Key entries:
+
+| Key | Value | Used By |
+|-----|-------|---------|
+| `CICI_OLLAMA_HOST` | `http://local-llm.ai-ml.svc.cluster.local:11434` | MIND |
+| `CICI_OLLAMA_MODEL` | `hermes3` | MIND |
+| `CICI_MOUTH_HOST_INTERNAL` | `cici-mouth.ai-ml.svc.cluster.local` | MIND, FACE |
+| `CICI_MOUTH_PORT_INTERNAL` | `8001` | MIND, FACE |
+| `CICI_EARS_HOST_INTERNAL` | `cici-ears.ai-ml.svc.cluster.local` | FACE |
+| `CICI_MIND_HOST_INTERNAL` | `cici-mind.ai-ml.svc.cluster.local` | FACE |
+
+**Important:** `OLLAMA_HOST` must include the `http://` protocol and port — MIND uses it as a full base URL (e.g., `f"{ollama_host}/api/generate"`). Internal service hostnames must match actual k8s service names (no `-dev` suffix).
