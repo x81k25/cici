@@ -3,7 +3,7 @@ FROM 192.168.50.2:5050/ai-ml/torch-base:torch2.5-cu121
 WORKDIR /app
 
 # Copy root project files for dependency resolution
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # Copy ears module
 COPY ears/ears/ ./ears/ears/

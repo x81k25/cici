@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/root/.local/bin:$PATH"
 
 # Copy root project files for dependency resolution
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # Copy mouth module and config
 COPY mouth/mouth/ ./mouth/mouth/
